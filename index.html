@@ -1,0 +1,805 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ARR → Capex 反算台</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#F2F4F6; --panel:#FFFFFF; --ink:#16232E; --ink2:#5A6B7A; --line:#D6DCE2; --grid:#E6EAEE;
+  --arr:#0E6B6B; --arr-soft:#0E6B6B26; --dem:#8A93A0; --cap:#D98E04; --cap-soft:#D98E0433; --dep:#7A3DD1; --keep:#5C6E7E; --rd:#8E5AD1; --waste:#B4BDC6; --neg:#C43C3C; --neg-soft:#C43C3C2E; --idle:#4C7BD9;
+  --chip:#E8ECEF; --focus:#0E6B6B;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F161C; --panel:#18222B; --ink:#E6ECF0; --ink2:#93A3B0; --line:#2C3944; --grid:#233039;
+    --arr:#3FC2B8; --arr-soft:#3FC2B826; --dem:#8C99A6; --cap:#F0B03E; --cap-soft:#F0B03E33; --dep:#B58CFF; --keep:#7E93A4; --rd:#A88AE6; --waste:#4B5A68; --neg:#F07070; --neg-soft:#F070702E; --idle:#7FA3F0;
+    --chip:#243039; --focus:#3FC2B8;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F161C; --panel:#18222B; --ink:#E6ECF0; --ink2:#93A3B0; --line:#2C3944; --grid:#233039;
+  --arr:#3FC2B8; --arr-soft:#3FC2B826; --dem:#8C99A6; --cap:#F0B03E; --cap-soft:#F0B03E33; --dep:#B58CFF; --keep:#7E93A4; --rd:#A88AE6; --waste:#4B5A68; --neg:#F07070; --neg-soft:#F070702E; --idle:#7FA3F0;
+  --chip:#243039; --focus:#3FC2B8;
+}
+*{box-sizing:border-box}
+.tabs{display:flex;gap:6px;margin:10px 0 18px;border-bottom:1px solid var(--line)}
+.tab{border:0;background:none;color:var(--ink2);padding:8px 12px;font:inherit;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--arr);font-weight:600}
+.tab:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:13px}
+.grid2 label{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.grid2 input{width:70px;text-align:right;border:1px solid var(--line);border-radius:4px;padding:2px 6px;background:var(--bg);color:var(--ink);font:inherit}
+.grid2 label.f span{color:var(--ink2)}
+.rdtbl{border-collapse:collapse;width:100%;min-width:0;font-size:13px;margin-top:6px;table-layout:fixed}
+.rdtbl td{padding:3px 4px;border-bottom:1px solid var(--grid);position:static;white-space:nowrap}
+.rdtbl td:first-child{width:44px}.rdtbl td:nth-child(2){width:78px}
+.rdtbl td:nth-child(2){text-align:right}
+.rdtbl td:last-child{text-align:right;color:var(--ink2)}
+.rdtbl input{width:58px;text-align:right;border:1px solid var(--line);border-radius:4px;padding:2px 6px;background:var(--bg);color:var(--ink);font:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 24px 60px}
+h1{font-size:26px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--ink2);margin:0 0 20px;max-width:72ch}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+.formula{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 16px;margin-bottom:20px;font-size:14px;line-height:1.9}
+.formula b{color:var(--arr)} .formula .c{color:var(--cap)}
+.layout{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start}
+@media (max-width:860px){.layout{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+.lab{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin:14px 0 6px}
+.lab:first-child{margin-top:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:999px;padding:4px 11px;font-size:13px;cursor:pointer;font-family:inherit}
+.chip[aria-pressed="true"]{background:var(--arr);border-color:var(--arr);color:#fff}
+.chip:focus-visible,input:focus-visible,.preset button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.row{display:flex;align-items:center;gap:10px;font-size:13px;margin-top:4px}
+.row>span:first-child{min-width:64px}
+.row input[type=range]{flex:1;accent-color:var(--arr);min-width:0}
+.row .v{min-width:56px;text-align:right}
+.hint{font-size:12px;color:var(--ink2);margin:4px 0 0;line-height:1.5}
+.preset{display:grid;gap:6px}
+.preset button{text-align:left;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:6px;padding:8px 10px;cursor:pointer;font-family:inherit;font-size:13px;line-height:1.4}
+.preset button[aria-pressed="true"]{border-color:var(--arr);background:var(--arr-soft)}
+.preset small{display:block;color:var(--ink2)}
+svg{width:100%;height:auto;display:block}
+.charts{display:grid;gap:14px}
+.ctitle{font-size:13px;font-weight:600;margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink2);flex-wrap:wrap;font-weight:400}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.legend i.l{height:3px;border-radius:2px;vertical-align:2px}
+.legend i.d{height:0;border-top:2px dashed var(--dem);background:none;vertical-align:2px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.kpi .n{font-size:20px;font-weight:500}
+.kpi .t{font-size:12px;color:var(--ink2)}
+.tablewrap{overflow-x:auto;margin-top:20px}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:860px}
+th{font-weight:500;color:var(--ink2);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+td{text-align:right;padding:4px 8px;border-bottom:1px solid var(--grid)}
+td input{width:76px;text-align:right;border:1px solid var(--line);border-radius:4px;padding:3px 6px;background:var(--bg);color:var(--ink);font:inherit}
+tr.p1 td:first-child{border-left:3px solid var(--arr)}
+tr.p2 td:first-child{border-left:3px solid var(--cap)}
+.neg{color:var(--neg)} .idle{color:var(--idle)} .ok{color:var(--arr)}
+.note{font-size:13px;color:var(--ink2);margin-top:10px;max-width:84ch}
+.note b{color:var(--ink)}
+.doc h3{font-size:14px;margin:14px 0 4px}
+.doc p{margin:0;font-size:13px;line-height:1.7;color:var(--ink);max-width:90ch}
+.doc b{color:var(--arr)}
+@media (prefers-reduced-motion:no-preference){.bar,.pt{transition:all .35s ease}}
+</style>
+
+<div class="wrap">
+  <h1>ARR → Capex 反算台</h1>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-page="page1" aria-selected="true">① 模型推演 · 需求→产能→capex</button>
+    <button class="tab" role="tab" data-page="page2" aria-selected="false">② 现实倒算 · 已发生的 capex 去了哪</button>
+    <button class="tab" role="tab" data-page="page3" aria-selected="false">③ 反推 ARR · 给定 capex 走势，ARR 得走多高</button>
+    <button class="tab" role="tab" data-page="page4" aria-selected="false">④ 1 万亿从哪来 · 场景价值池 × 抽成 × 解锁</button>
+  </div>
+<div id="page1">
+  <p class="sub">需求是外生的，产能是买出来的，收入只能等于两者中的小者。改需求的爬坡节奏、建设方的反应方式和平滑程度，看每年 capex、实际确认的 ARR 和排队缺口如何变化。单位：亿美元；需求表格可以逐年手改。</p>
+
+  <div class="formula mono" id="formula"></div>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="lab">情景预设</div>
+      <div class="preset" id="presets"></div>
+
+      <div class="lab">需求端 · 2023→2026 到 1 万亿，2027→2029 到 2 万亿</div>
+      <div class="chips" data-group="shape"></div>
+      <div class="lab">2029 之后需求</div>
+      <div class="chips" data-group="post"></div>
+
+      <div class="lab">建设方看到的是什么</div>
+      <div class="chips" data-group="mode"></div>
+      <p class="hint" id="modeHint"></p>
+
+      <div class="lab">建设参数</div>
+      <div class="row"><span>交付周期</span><input type="range" id="lead" min="1" max="2" step="1" value="1"><span class="v mono" id="leadV">1 年</span></div>
+      <div class="row"><span>建设平滑</span><input type="range" id="alpha" min="0" max="80" step="5" value="0"><span class="v mono" id="alphaV">0%</span></div>
+      <p class="hint">平滑 = 今年 capex 向去年靠拢的比例。0% 完全按需要量下单（会脉冲），越高曲线越匀速，但可能追不上需求。</p>
+
+      <div class="lab">财务参数</div>
+      <div class="row"><span>折旧/收入</span><input type="range" id="ratio" min="10" max="60" step="1" value="30"><span class="v mono" id="ratioV">30%</span></div>
+      <div class="row"><span>设备寿命</span><input type="range" id="life" min="2" max="6" step="1" value="3"><span class="v mono" id="lifeV">3 年</span></div>
+      <div class="row"><span>2022 起点</span><input type="range" id="base" min="500" max="5000" step="100" value="2000"><span class="v mono" id="baseV">2000</span></div>
+    </div>
+
+    <div class="charts">
+      <div class="panel">
+        <p class="ctitle"><span>下游：需求、产能上限与实际 ARR</span><span class="legend"><span><i class="d"></i>需求</span><span><i class="l" style="background:var(--cap)"></i>产能上限</span><span><i style="background:var(--arr-soft);border:1px solid var(--arr)"></i>实际 ARR</span><span><i style="background:var(--neg-soft)"></i>排队缺口</span></span></p>
+        <svg id="c1" viewBox="0 0 860 270"></svg>
+      </div>
+      <div class="panel">
+        <p class="ctitle"><span>上游：当年 Capex</span><span class="legend"><span><i style="background:var(--keep)"></i>更新：替换到期的那批设备</span><span><i style="background:var(--cap)"></i>增量：为 ARR 边际增长扩产</span><span><i style="background:var(--neg-soft);border:1px dashed var(--neg)"></i>到期未补</span><span><i style="background:none;border:1.5px dashed var(--ink2)"></i>未平滑的需要量</span><span><i class="l" style="background:var(--dep)"></i>年折旧</span></span></p>
+        <svg id="c2" viewBox="0 0 860 300"></svg>
+        <div class="kpis" id="kpis"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel tablewrap">
+    <table id="tbl"></table>
+    <p class="note">读法：<b>产能上限</b> = 在役设备原值 ÷ (折旧比例 × 寿命)，只有交付上架的设备才算在役；<b>实际 ARR</b> = min(需求, 产能上限)；<b>缺口</b>为正是排队的需求（红），为负是闲置产能（蓝）。<b>折旧/ARR</b> 高于设定比例，说明有闲置。<b>更新 capex</b> = 这批设备上架时恰好到期退役的那批（寿命年前下单的）设备原值；<b>增量 capex</b> = 在役设备存量的净增加，对应 ARR 的边际增长；增量为负表示到期设备没有全部补上。</p>
+  </div>
+</div><!-- /page1 -->
+
+<div id="page2" hidden>
+  <p class="sub">把已经发生的 capex 和已经看到/预期的 ARR 放在一起：按"纯推理折旧占收入 30%、三年折旧、设备次年上架"的商业模型，倒算每一年 capex 里有多少被 ARR 认领、多少是提前建设、多少是训练/研发/传统赋能这类不产生原生 ARR 的投入；再往前推出为了兑现未来 ARR 每年还需要买多少。历史列为实线，预测列为虚线框。单位：亿美元。</p>
+  <div class="formula mono" id="formula2"></div>
+  <div class="layout">
+    <div class="panel">
+      <div class="lab">2027 之后 ARR 怎么走（一键）</div>
+      <div class="chips" id="arrPresets"></div>
+      <div class="row" id="arrGRow" style="margin-top:6px"><span>2028 起年增速</span><input type="range" id="arrG" min="10" max="150" step="5" value="50"><span class="v mono" id="arrGV">+50%</span></div>
+      <p class="hint">以 2026 = 1000、2027 = 2000 为起点（2027 可在下表改，预设按它往上算）。选"固定增速"后拖滑杆；表格里仍可逐年手改。</p>
+      <div class="lab">已知 / 预期 ARR（可改）</div>
+      <div class="hint" style="margin-bottom:6px">2027 起为预期，默认 2027 = 2000，之后按上面的开关生成。</div>
+      <div id="arrInputs" class="grid2"></div>
+      <div class="lab">已发生 / 已知 capex（可改）</div>
+      <div id="capInputs" class="grid2"></div>
+      <div class="lab">假设</div>
+      <div class="hint" style="margin-bottom:6px">2023–2027 每年 capex 里，用于训练 / 研发 / 大厂基础盘与非原生 AI 赋能、不会形成原生 ARR 的<b>金额</b>（亿美元）。先选一个形状，再逐年改；未来年份用下面的"未来每年研发"。</div>
+      <div class="chips" id="rdPresets"></div>
+      <table class="rdtbl" id="rdTable"></table>
+      <div class="row"><span>未来每年非原生</span><input type="range" id="rdFut" min="0" max="10000" step="250" value="5500"><span class="v mono" id="rdFutV">5500</span></div>
+      <p class="hint">2028 起每年固定投入训练/研发/大厂基础盘的 capex（亿美元），不形成原生 ARR；在此之上再按需求买推理产能。第③页共用这个数。</p>
+      <div class="chips" id="rdGChips" style="margin-top:6px"><button class="chip" data-v="0">之后持平</button><button class="chip" data-v="-0.05">每年 −5%</button><button class="chip" data-v="-0.1">每年 −10%</button><button class="chip" data-v="-0.2">每年 −20%</button><button class="chip" data-v="0.1">每年 +10%</button></div>
+      <div class="row"><span>推理利用率</span><input type="range" id="util2" min="50" max="100" step="5" value="90"><span class="v mono" id="util2V">90%</span></div>
+      <p class="hint">在役推理设备中真正被 ARR 用满的比例，与第③页共用同一个数：1 块钱 ARR 需要的设备 = 30% ÷ 利用率 × 寿命。</p>
+      <div class="row"><span>前置可利用率</span><input type="range" id="reuse" min="0" max="100" step="10" value="70"><span class="v mono" id="reuseV">70%</span></div>
+      <p class="hint">上架时没被 ARR 用上的推理产能，之后还能被后续需求用上的比例。剩下的视为代际过时或位置不对，直到报废也用不上。</p>
+      <div class="lab">预测期建设提前量</div>
+      <div class="chips" id="leadChips"><button class="chip" data-v="0">按需：只买明年要用的</button><button class="chip" data-v="0.2">再提前买 20%</button><button class="chip" data-v="0.3">再提前买 30%</button></div>
+      <p class="hint">设备本来就是今年买、明年上架。"再提前买 20%"= 除了明年要用的，把后年还要新增的量提前买 20% 进来，多买的部分先闲置、次年被用上，图上是橙色"提前建设·后来用上"。</p>
+      <div class="lab">预测期"更新"口径</div>
+      <div class="chips" id="repChips"><button class="chip" data-v="dep">按折旧额：更新 = 当年全部在役设备的账面折旧</button><button class="chip" data-v="cohort">按到期批次：只替换当年退役的推理设备</button></div>
+      <p class="hint">按折旧额 = 维持性 capex 等于当年在役推理设备的折旧，从 2028 年起就把此前所有推理 capex 按各自寿命平均更新（非原生那 5500 是含自身更新的总预算，不再重复画进更新）；按到期批次 = 只在某批设备真正退役那年才补。</p>
+      <div class="lab">退役节奏</div>
+      <div class="chips" id="spreadChips"><button class="chip" data-v="1">分批退役（寿命 ±1 年）</button><button class="chip" data-v="0">整批到期</button></div>
+      <p class="hint">整批到期 = 某年买的设备三年后同一年全部退役，更新 capex 会出现三年一次的锯齿；分批退役 = 每批设备分三年退役（2、3、4 年各 1/3），更接近真实机房的滚动更新，曲线平滑。</p>
+      <div class="row"><span>折旧/收入</span><input type="range" id="ratio2" min="10" max="60" step="1" value="30"><span class="v mono" id="ratio2V">30%</span></div>
+      <div class="lab">设备折旧年限</div>
+      <div class="hint">2027 年及以前买的设备（含 2027 年那 1.2 万亿）</div><div class="chips" data-life="lifeOld"></div>
+      <div class="hint" style="margin-top:6px">2028 年起买的设备（云厂商现行口径 5–6 年）</div><div class="chips" data-life="lifeNew"></div>
+      <p class="hint">折旧占收入 30% 的规则按年折旧额计：一批设备每年提供 原值÷寿命 的折旧，能支撑的 ARR = 折旧÷30%。寿命越长，同样 ARR 需要挂更多原值的设备，但每年到期的更少。</p>
+    </div>
+    <div class="charts">
+      <div class="panel">
+        <p class="ctitle"><span>ARR 与账面折旧：折旧占收入比如何从几倍收敛到 30%</span><span class="legend"><span><i style="background:var(--arr-soft);border:1px solid var(--arr)"></i>ARR</span><span><i class="l" style="background:var(--dep)"></i>账面折旧（全部 capex）</span><span><i class="l" style="background:var(--ink2)"></i>折旧 / ARR</span></span></p>
+        <svg id="d1" viewBox="0 0 860 280"></svg>
+      </div>
+      <div class="panel">
+        <p class="ctitle"><span>每年 capex 去向：历史（实）与预测（虚）</span><span class="legend"><span><i style="background:var(--keep)"></i>更新：替换到期设备</span><span><i style="background:var(--arr)"></i>增量：跟上边际新增 ARR</span><span><i style="background:var(--cap)"></i>提前建设·后来用上</span><span><i style="background:var(--waste)"></i>提前建设·直到报废没用上</span><span><i style="background:var(--rd)"></i>训练 / 研发 / 非原生</span></span></p>
+        <svg id="d2" viewBox="0 0 860 320"></svg>
+        <div class="kpis" id="kpis2"></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel tablewrap">
+    <table id="tbl2"></table>
+    <p class="note">读法：每一列 capex 是一批设备（次年上架、用满寿命）。<b>更新</b>是上架当年用来替换同年退役的<u>推理</u>设备的部分（非原生/研发那块是固定年度预算，其自身的更新已含在里面，不单独画），<b>增量</b>是上架当年被新增 ARR 需要的部分（两者合计即上架即被认领）；<b>提前·后用</b>是上架时闲置、后来被增长的 ARR 用上的部分；<b>提前·未用</b>是直到报废都没用上的部分（含可利用率之外的过时损耗）；<b>非原生</b>是训练/研发/传统赋能。预测年份的 capex = 兑现下一年 ARR 所缺的推理产能 + 固定的年度研发投入。<b>产能缺口</b>为正表示既有和当年可买的设备都不够（说明历史 capex 无法支撑该 ARR，需再加买）。</p>
+  </div>
+</div><!-- /page2 -->
+
+<div id="page3" hidden>
+  <p class="sub">反过来算：先定未来总 capex 的走势（最多微弱下滑、或者继续增长），扣掉每年固定的非原生投入，剩下的推理设备在三年寿命内滚动叠加，就是任一年能支撑的 ARR 上限。要让这条 capex 曲线"圆得起来"，ARR 就必须至少走到这条线，而且增速由它决定。历史 capex 与非原生金额沿用第②页的输入。单位：亿美元。</p>
+  <div class="formula mono" id="formula3"></div>
+  <div class="layout">
+    <div class="panel">
+      <div class="lab">未来 capex 走势 · 2028E–2032E</div>
+      <div class="chips" id="capPresets"></div>
+      <table class="rdtbl" id="capTable"></table>
+      <div class="lab">假设</div>
+      <div class="row"><span>推理利用率</span><input type="range" id="util3" min="50" max="100" step="5" value="90"><span class="v mono" id="util3V">90%</span></div>
+      <p class="hint">在役推理设备中真正被 ARR 用满的比例；剩下的是过时、位置不对或客户切换期间的空转。100% 即完全按模型换算。</p>
+      <div class="row"><span>折旧/收入</span><input type="range" id="ratio3" min="10" max="60" step="1" value="30"><span class="v mono" id="ratio3V">30%</span></div>
+      <div class="lab">"更新"口径</div>
+      <div class="chips" id="repChips3"><button class="chip" data-v="dep">按折旧额</button><button class="chip" data-v="cohort">按到期批次</button></div>
+      <div class="lab">设备折旧年限（本页独立设置）</div>
+      <div class="hint">2027 年及以前买的设备</div><div class="chips" data-life3="lifeOld"></div>
+      <div class="hint" style="margin-top:6px">2028 年起买的设备</div><div class="chips" data-life3="lifeNew"></div>
+      <p class="hint" style="margin-top:12px">非原生金额：历史用第②页表格，2028 起为 <span class="mono" id="rdFut3"></span> 亿/年；退役节奏也沿用第②页的设置（当前：<span id="spread3"></span>）。</p>
+    </div>
+    <div class="charts">
+      <div class="panel">
+        <p class="ctitle"><span>这条 capex 能撑起的 ARR，以及它要求的增速</span><span class="legend"><span><i style="background:var(--arr-soft);border:1px solid var(--arr)"></i>capex 隐含的 ARR 上限</span><span><i class="d"></i>第②页里你预期的 ARR</span><span><i class="l" style="background:var(--ink2)"></i>隐含 ARR 同比</span></span></p>
+        <svg id="e1" viewBox="0 0 860 300"></svg>
+      </div>
+      <div class="panel">
+        <p class="ctitle"><span>对应的 capex 构成</span><span class="legend"><span><i style="background:var(--keep)"></i>更新（在役推理设备折旧）</span><span><i style="background:var(--arr)"></i>推理净增量</span><span><i style="background:var(--rd)"></i>非原生 / 研发 / 基础盘</span></span></p>
+        <svg id="e2" viewBox="0 0 860 280"></svg>
+        <div class="kpis" id="kpis3"></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel tablewrap">
+    <table id="tbl3"></table>
+    <p class="note">读法：<b>在役推理原值</b> = 寿命内的推理 capex 之和（分批退役时按寿命 ±1 年各 1/3 加权）；<b>隐含 ARR</b> = 在役推理原值 × 利用率 ÷ (折旧比例 × 寿命)。<b>更新</b>按折旧额口径 = 当年在役推理设备的账面折旧（按到期批次口径 = 当年退役的推理设备原值）；<b>推理净增量</b>为负表示当年买的推理设备不够更新，在役产能收缩、ARR 上限下降。要让 ARR 持续增长，每年推理 capex 必须高于三年前那批推理 capex——这就是"capex 不能断崖下滑"在数学上的含义。</p>
+  </div>
+</div><!-- /page3 -->
+
+<div id="page4" hidden>
+  <p class="sub">自下而上地算 1 万亿：把 AI 能碰到的场景逐个列出来，每个场景给三个数——这个场景一年的价值池（行业收入或人力成本）、AI 能从整个池子里收走几个点（抽成率）、今天渗透到了几成（渗透率）。三个数相乘就是这个场景贡献的 AI ARR。默认参数校准到 2026 年约 1000 亿。每一格都能改。单位：全部为亿美元。</p>
+  <div class="formula mono" id="formula4"></div>
+  <div class="layout">
+    <div class="panel">
+      <div class="lab">一键情景</div>
+      <div class="preset" id="presets4"></div>
+      <div class="lab">全局旋钮（乘在每一行上）</div>
+      <div class="row"><span>抽成倍数</span><input type="range" id="takeMul" min="25" max="400" step="5" value="100"><span class="v mono" id="takeMulV">1.0×</span></div>
+      <div class="row"><span>渗透倍数</span><input type="range" id="unlockMul" min="10" max="3000" step="10" value="100"><span class="v mono" id="unlockMulV">1.0×</span></div>
+      <p class="hint">抽成率除 coding 为 7% 外一律 5%，渗透率是按 2026 年各场景 AI ARR 校准出来的基准。抽成倍数乘到每一行的抽成率上（0.25×–4×），渗透倍数乘到每一行的渗透率上（封顶 100%，拖到最右即全部渗透）。两者都是 1.0× 时就是 2026 年基准。</p>
+      <div class="lab">为什么默认抽成是 5%</div>
+      <p class="hint">软件行业一百年来从它服务的人力价值里收走的钱大约是 1–2%（全球 SaaS 约 3000 亿 vs 三四十万亿的白领工资）；外包能收走它替代的人力的 50–70%，但只在它真正接管交付责任时。AI 介于两者之间：它比软件做得多得多，但大多数场景里责任还在人手上。coding 是例外——结果能自动验证，所以抽成能到 10% 以上。这就是"为什么是 5%"的答案：它是"软件的 1%"和"外包的 50%"之间、由谁背责任决定的一个位置。要把它推到 10% 以上，AI 得接管责任。</p>
+    </div>
+    <div class="charts">
+      <div class="panel">
+        <p class="ctitle"><span>每一行三层：行业价值池 → × 抽成率 → × 渗透率（亿美元，对数刻度）</span><span class="legend" id="leg4"></span></p>
+        <svg id="f1" viewBox="0 0 860 560"></svg>
+        <div class="kpis" id="kpis4"></div>
+      </div>
+      <div class="panel">
+        <p class="ctitle"><span>敏感性：合计 AI ARR（亿美元）随抽成倍数 × 渗透倍数变化</span></p>
+        <div class="tablewrap" style="margin-top:0"><table id="sens4" style="min-width:0"></table></div>
+        <p class="note">绿色 ≥ 1 万亿，深绿 ≥ 2 万亿。读法：横着看是"同样的渗透率下抽成要多高"，竖着看是"同样的抽成下要渗透到多深"。</p>
+      </div>
+    </div>
+  </div>
+  <div class="panel tablewrap">
+    <table id="tbl4"></table>
+    <p class="note">价值池口径：能用人力成本衡量的场景用全球该职业的工资总额，平台型场景用平台收入（不是 GMV），科研用全球研发支出，物理世界用制造与物流的人力成本；每行的具体口径见第二列。<b>价值池不是 AI 的收入</b>，AI 能收走的上限 = 价值池 × 可触及 × 抽成，所以广告 1.1 万亿的池子对应的 AI 上限只有 330 亿。数字都是量级估算，改成你自己的即可。<b>抽成率</b>是 AI 最终能从整个价值池里收走的比例（已把"碰不到的部分"折进去了，所以医疗、政府这类只有 1% 上下）。<b>渗透率</b>是今天走到了这个上限的百分之几。</p>
+  </div>
+
+  <div class="panel" style="margin-top:20px">
+    <h2 style="font-size:18px;margin:0 0 6px">每一行是怎么算出来的</h2>
+    <p class="note" style="margin-top:0">口径原则：能用人算的场景，价值池 = 从业人数 × 平均年薪（用各国工资加权，不是美国工资）；平台型场景用平台自身收入而不是 GMV，因为 AI 只能从平台能收到的钱里抽成；科研用全球研发支出；物理世界用制造与物流的人力成本。所有数字都是 2025–2026 年的量级估算，精度在 ±30%，来源写在每一条里，能改的都在上表。</p>
+    <div class="doc">
+<h3>软件开发 · 3.5 万亿</h3><p>程序员人数按 SlashData / Evans Data 的口径约 2800–4700 万，取 3000 万；全球加权平均年薪约 6.5 万美元（美国 12 万以上、印度 1–2 万，按人数加权），得 <b>工资池约 2.0 万亿</b>。再加全球 IT 服务与外包市场（Gartner 2025 年 IT 服务支出约 1.5–1.7 万亿，其中大部分是人力）取 <b>1.5 万亿</b>。抽成 7%、渗透 30% 是从 2026 年约 700 多亿的 coding ARR 倒推的（Menlo Ventures 调研里 coding 是最大单一用途）。其余场景抽成一律 5%，渗透率按各场景 2026 年的 AI ARR 校准，所以医疗、政府、机器人这类今天几乎没开始的场景渗透率是零点几个百分点。</p>
+<h3>客服 / 呼叫中心 · 0.8 万亿</h3><p>全球坐席约 1700 万（行业估计，含 BPO 与自建），加权年薪约 2.5 万美元，得 0.4 万亿；加上 BPO 行业收入约 0.3 万亿以及企业自建客服的系统与管理成本，合计取 <b>0.8 万亿</b>。</p>
+<h3>销售与营销人力 · 2.5 万亿</h3><p>全球销售与营销类岗位约 1 亿人（ILO 职业分类中的销售、营销、商务人员），加权年薪 2.5 万，得 <b>2.5 万亿</b>。不含广告投放费（那在"广告"一行）。</p>
+<h3>金融、保险、会计、审计 · 4.0 万亿</h3><p>全球金融与保险业从业者约 6000 万（ILO），加权年薪 5.5 万，得约 3.3 万亿；加会计、审计、税务服务行业收入约 0.7 万亿（四大合计约 2000 亿，全行业约 6000–7000 亿），合计 <b>4.0 万亿</b>。注意这不是金融业收入（那是十几万亿），是金融业里"人"的成本。</p>
+<h3>法律服务 · 1.3 万亿</h3><p>全球律所与法律服务市场收入约 1.0 万亿（Statista / IBISWorld 口径 2025 年约 9000 亿–1 万亿）；企业内部法务人力约 0.3 万亿。合计 <b>1.3 万亿</b>。</p>
+<h3>医疗人力 · 5.0 万亿</h3><p>WHO 口径全球医疗卫生支出约 10 万亿美元（约占全球 GDP 10%）；其中人力成本通常占 50–60%，取 5 万亿。这里面 AI 能碰的主要是文书、影像、行政和部分诊断辅助，临床动手的部分碰不到——这体现在渗透率的上限上，抽成率统一按 5%。</p>
+<h3>教育人力 · 4.0 万亿</h3><p>UNESCO《Education Finance Watch》口径全球教育支出约 5–6 万亿美元（公共支出约占 GDP 4.5%，加私人支出）；教师与教学人力约占 70%，取 <b>4.0 万亿</b>。</p>
+<h3>一般行政、管理、文员岗 · 8.0 万亿</h3><p>ILO 口径全球文员类岗位约 3 亿人、管理类岗位约 1.5 亿人，除去已在金融、医疗、教育、政府里计过的部分，取行政文员 2.5 亿 × 1.6 万 = 4 万亿，管理岗 1 亿 × 4 万 = 4 万亿，合计 <b>8.0 万亿</b>。这是最粗的一行，也是弹性最大的一行。</p>
+<h3>政府与公共行政人力 · 4.0 万亿</h3><p>IMF 口径全球政府工资总额约占 GDP 9–10%，即约 10 万亿；扣掉公立教育、公立医疗、军警（这些已在别处或碰不到），留纯行政管理部分约 <b>4.0 万亿</b>。政府采购 AI 的意愿和速度都最低，所以 2026 年渗透率几乎为零。</p>
+<h3>广告 · 1.3 万亿</h3><p>WARC 2025 年 12 月预测：2025 年全球广告支出 1.19 万亿，<b>2026 年 1.30 万亿</b>。这里的价值池是广告主付给平台的钱（谷歌约 4000 亿、Meta 约 2000 亿、亚马逊约 700 亿等），AI 的抽成体现在创意生成、投放优化和效果提升上。</p>
+<h3>电商与零售 · 1.5 万亿</h3><p>全球电商 GMV 约 7 万亿（eMarketer 口径），但价值池取平台自身收入：亚马逊零售与第三方服务约 6000 亿，阿里、拼多多、京东、Shopify 等合计约 4000 亿，其余平台约 5000 亿，取 <b>1.5 万亿</b>。一个新的购物 agent 带来的增量销售最终体现为平台收入的增长，AI 从中收走的是这部分收入的一个比例，所以抽成的基数是平台收入而不是 GMV。</p>
+<h3>本地生活 / 外卖 · 0.2 万亿</h3><p>全球外卖与本地服务 GMV 约 1.2 万亿；平台自身收入（佣金 + 广告）约 15–20%，即 <b>0.2 万亿</b>（美团约 500 亿、DoorDash 约 150 亿、Uber 外卖约 150 亿等）。</p>
+<h3>影视、游戏、音乐、设计与营销内容制作 · 1.3 万亿</h3><p>游戏行业收入约 2000 亿（Newzoo），影视与流媒体内容制作约 2500 亿，音乐约 300 亿，广告创意、设计、影像与营销内容制作服务约 8500 亿（含代理公司与自由职业者），合计 <b>1.3 万亿</b>。</p>
+<h3>消费者直接付费 · 1.0 万亿</h3><p>全球消费者在数字订阅、应用内购买、内容付费上的支出约 1 万亿（App Store + Google Play 约 2000 亿，流媒体订阅约 2000 亿，游戏内购、在线教育、社交付费等）。AI 助手、陪伴、创作工具是从这个钱包里分钱——这一行的"抽成"其实是份额，2026 年约 100 亿对应 20% 的渗透。</p>
+<h3>科研与研发 · 3.0 万亿</h3><p>WIPO《全球创新指数》口径：2023 年全球研发支出接近 <b>3 万亿美元</b>（购买力平价），其中企业约 2.2 万亿、政府与高校约 0.8 万亿。AI 从中抽成体现在研发效率提升上。</p>
+<h3>机器人 · 15 万亿</h3><p>全球制造业从业者约 4.5 亿、物流仓储约 1 亿；加权年薪按 2.5 万，得制造约 12 万亿、物流约 3 万亿，合计 <b>15 万亿</b>。这是最大的池子，按统一的 5% 抽成上限就有 7500 亿，但 2026 年渗透率只有万分之三，因为把智力装进物理世界要先解决硬件、成本和安全。这一行的渗透率是整张表里唯一能单独改变结论的变量。</p>
+    </div>
+  </div>
+</div><!-- /page4 -->
+</div>
+
+<script>
+const Y0=2021, Y1=2033, YEARS=[]; for(let y=Y0;y<=Y1;y++) YEARS.push(y);
+const SHAPES={lin:{n:'匀速',f:x=>x},conv:{n:'后置爆发',f:x=>x*x},conc:{n:'前置爆发',f:x=>1-(1-x)**2}};
+const POST={flat:{n:'持平'},p10:{n:'每年 +10%'},p20:{n:'每年 +20%'}};
+const MODES={
+  lead:{n:'提前（有预期）',h:'建设方准确知道设备上架那一年的需求，提前下单。产能永远刚好够用，capex 承担全部波动。'},
+  sync:{n:'同步（看当年）',h:'建设方只知道今年的需求，按今年需求下单，设备明年才上架。需求爬多快，产能就欠多少。'},
+  lag:{n:'滞后（看去年）',h:'建设方按去年已确认的需求下单——超预期爆发时的典型状态。缺口最大，capex 峰值也最靠后。'},
+};
+const PRESETS=[
+  {id:'a',n:'教科书：提前 + 匀速需求',d:'完美预期，capex 是台阶状',shape:'lin',mode:'lead',alpha:0,lead:1,post:'flat'},
+  {id:'b',n:'匀速建设：提前 + 平滑 50%',d:'capex 被拉成斜坡，代价是几年的排队',shape:'lin',mode:'lead',alpha:50,lead:1,post:'flat'},
+  {id:'c',n:'产能追赶：同步 + 匀速需求',d:'没人提前买，ARR 被产能卡着走',shape:'lin',mode:'sync',alpha:0,lead:1,post:'flat'},
+  {id:'d',n:'超预期：滞后 + 后置爆发',d:'看去年下单、交付 2 年，缺口最深',shape:'conv',mode:'lag',alpha:0,lead:2,post:'flat'},
+  {id:'e',n:'前置爆发 + 同步',d:'先冲一波，capex 在爆发后一年才到顶',shape:'conc',mode:'sync',alpha:0,lead:1,post:'p10'},
+];
+const st={shape:'lin',post:'flat',mode:'lead',lead:1,alpha:0,ratio:.30,life:3,base:2000,dem:{},manual:false};
+
+function buildDemand(){
+  const a={}, base=st.base, f=SHAPES[st.shape].f;
+  for(let y=Y0;y<=2022;y++) a[y]=base;
+  for(let y=2023;y<=2026;y++) a[y]=base+(10000-base)*f((y-2022)/4);
+  for(let y=2027;y<=2029;y++) a[y]=10000+10000*f((y-2026)/3);
+  extend(a); return a;
+}
+function extend(a){ for(let y=2030;y<=Y1+3;y++){ if(y<=Y1&& st.manual && a[y]!=null) continue; const p=a[y-1]; a[y]= st.post==='flat'?p : st.post==='p10'?p*1.1 : p*1.2; } }
+function compute(){
+  const D=st.dem, r=st.ratio, L=st.life, lam=st.lead, al=st.alpha;
+  const C={}, raw={};
+  for(let y=Y0-L-lam-2;y<Y0;y++){ C[y]=r*D[Y0]; raw[y]=C[y]; }
+  for(let t=Y0;t<=Y1;t++){
+    const Dh = st.mode==='lead'?D[t+lam] : st.mode==='sync'?D[t] : D[t-1];
+    let exist=0; for(let k=1;k<=L-1;k++) exist+=C[t-k];
+    raw[t]=Math.max(0, r*L*Dh - exist);
+    C[t]=al*C[t-1]+(1-al)*raw[t];
+  }
+  return YEARS.map(y=>{
+    let S=0; for(let k=lam;k<=lam+L-1;k++) S+=C[y-k];
+    const K=S/(r*L), arr=Math.min(D[y],K), gap=D[y]-K, dep=S/L;
+    const rep=Math.min(C[y],C[y-L]), grow=C[y]-C[y-L];
+    return {y,dem:D[y],cap:K,arr,gap,capex:C[y],raw:raw[y],rep,grow,retire:C[y-L],dep,ci:dep/arr,cg:y>Y0?C[y]/C[y-1]-1:0};
+  });
+}
+const fmt=n=>Math.round(n).toLocaleString('zh-CN');
+const band=v=>v==null?'':(v>0.7?'neg':v<0.3?'idle':'ok');
+const pct=n=>{const v=Math.round(n*100)||0;return (v>=0?'+':'')+v+'%';};
+const MONO='IBM Plex Mono,monospace';
+
+function lineChart(rows){
+  const W=860,H=270,ml=56,mr=16,mt=18,mb=32, iw=W-ml-mr, ih=H-mt-mb;
+  const max=Math.max(...rows.map(r=>Math.max(r.dem,r.cap)))*1.08;
+  const x=i=>ml+iw*(i+.5)/rows.length, y=v=>mt+ih*(1-v/max);
+  let s='';
+  const step=max>30000?10000:5000;
+  for(let v=0;v<=max;v+=step) s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${ml-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--ink2)" font-family="${MONO}">${v/10000}万亿</text>`;
+  // ARR area
+  const area=rows.map((r,i)=>`${x(i)},${y(r.arr)}`).join(' ');
+  s+=`<polygon points="${x(0)},${y(0)} ${area} ${x(rows.length-1)},${y(0)}" fill="var(--arr-soft)"/>`;
+  // gap band (backlog red / idle blue)
+  rows.forEach((r,i)=>{ if(i===0) return; const p=rows[i-1];
+    if(r.gap>0||p.gap>0) s+=`<polygon points="${x(i-1)},${y(p.arr)} ${x(i-1)},${y(p.dem)} ${x(i)},${y(r.dem)} ${x(i)},${y(r.arr)}" fill="var(--neg-soft)"/>`;
+  });
+  const pd=rows.map((r,i)=>`${x(i)},${y(r.dem)}`).join(' '), pk=rows.map((r,i)=>`${x(i)},${y(r.cap)}`).join(' ');
+  s+=`<polyline points="${pk}" fill="none" stroke="var(--cap)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  s+=`<polyline points="${pd}" fill="none" stroke="var(--dem)" stroke-width="2" stroke-dasharray="6 4"/>`;
+  s+=`<polyline points="${area}" fill="none" stroke="var(--arr)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  rows.forEach((r,i)=>{
+    s+=`<circle class="pt" cx="${x(i)}" cy="${y(r.arr)}" r="3.5" fill="var(--arr)"/>`;
+    if(r.y===2026||r.y===2029) s+=`<text x="${x(i)}" y="${y(Math.max(r.dem,r.cap))-10}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">需求 ${fmt(r.dem)}</text>`;
+    s+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${r.y}</text>`;
+  });
+  document.getElementById('c1').innerHTML=s;
+}
+function barChart(rows){
+  const W=860,H=300,ml=56,mr=16,mt=20,mb=32, iw=W-ml-mr, ih=H-mt-mb;
+  const hi=Math.max(...rows.map(r=>Math.max(r.capex,r.raw,r.dep)))*1.12;
+  const y=v=>mt+ih*(1-v/hi), x=i=>ml+iw*(i+.5)/rows.length, bw=iw/rows.length*.62;
+  let s='';
+  const step=hi>20000?5000:hi>8000?2000:1000;
+  for(let v=0;v<=hi;v+=step) s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${ml-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--ink2)" font-family="${MONO}">${fmt(v)}</text>`;
+  rows.forEach((r,i)=>{
+    const cx=x(i)-bw/2;
+    if(Math.abs(r.raw-r.capex)>1) s+=`<rect x="${cx}" y="${y(r.raw)}" width="${bw}" height="${y(0)-y(r.raw)}" fill="none" stroke="var(--ink2)" stroke-dasharray="3 3"/>`;
+    s+=`<rect class="bar" x="${cx}" y="${y(r.rep)}" width="${bw}" height="${y(0)-y(r.rep)}" fill="var(--keep)"/>`;
+    if(r.grow>0) s+=`<rect class="bar" x="${cx}" y="${y(r.capex)}" width="${bw}" height="${y(r.rep)-y(r.capex)}" fill="var(--cap)"/>`;
+    else if(r.grow<-1) s+=`<rect class="bar" x="${cx}" y="${y(r.retire)}" width="${bw}" height="${y(r.capex)-y(r.retire)}" fill="var(--neg-soft)" stroke="var(--neg)" stroke-dasharray="3 3"/>`;
+    s+=`<text x="${x(i)}" y="${y(Math.max(r.capex,r.raw,r.retire))-6}" text-anchor="middle" font-size="11" fill="var(--ink)" font-family="${MONO}">${fmt(r.capex)}</text>`;
+    s+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${r.y}</text>`;
+  });
+  s+=`<polyline points="${rows.map((r,i)=>`${x(i)},${y(r.dep)}`).join(' ')}" fill="none" stroke="var(--dep)" stroke-width="2" stroke-dasharray="5 4"/>`;
+  s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)"/>`;
+  document.getElementById('c2').innerHTML=s;
+}
+function kpis(rows){
+  const by=y=>rows.find(r=>r.y===y);
+  const backlog=rows.reduce((a,r)=>a+Math.max(0,r.gap),0);
+  const idle=rows.reduce((a,r)=>a+Math.max(0,-r.gap),0);
+  const peak=rows.reduce((a,r)=>r.capex>a.capex?r:a,rows[0]);
+  const dpk=rows.reduce((a,r)=>r.dem-r.arr>a.dem-a.arr?r:a,rows[0]);
+  const items=[
+    ['累计排队需求',fmt(backlog),'因产能不足没确认的收入（各年加总）'],
+    ['累计闲置产能',fmt(idle),'折旧摊在空转设备上'],
+    ['capex 峰值',fmt(peak.capex),peak.y+' 年 · 需求峰值缺口最大在 '+dpk.y],
+    ['2029 年 ARR / 需求',(by(2029).arr/by(2029).dem*100).toFixed(0)+'%','需求 2 万亿那年真正确认了多少'],
+  ];
+  document.getElementById('kpis').innerHTML=items.map(([t,n,d])=>`<div class="kpi"><div class="t">${t}</div><div class="n mono">${n}</div><div class="t">${d}</div></div>`).join('');
+}
+function table(rows){
+  let h=`<tr><th>年份</th><th>需求</th><th>产能上限</th><th>实际 ARR</th><th>缺口</th><th>更新 capex</th><th>增量 capex</th><th>capex 合计</th><th>capex 同比</th><th>折旧</th><th>折旧 / ARR</th></tr>`;
+  rows.forEach(r=>{
+    const cls=r.y>=2023&&r.y<=2026?'p1':r.y>=2027&&r.y<=2029?'p2':'';
+    const g=Math.abs(r.gap)<1?'—':(r.gap>0?`<span class="neg">排队 ${fmt(r.gap)}</span>`:`<span class="idle">闲置 ${fmt(-r.gap)}</span>`);
+    h+=`<tr class="${cls}"><td class="mono">${r.y}</td><td><input class="mono" data-y="${r.y}" value="${Math.round(r.dem)}" inputmode="numeric"></td><td class="mono">${fmt(r.cap)}</td><td class="mono" style="font-weight:500">${fmt(r.arr)}</td><td class="mono">${g}</td><td class="mono">${fmt(r.rep)}</td><td class="mono ${r.grow<0?'neg':''}">${fmt(r.grow)}</td><td class="mono" style="font-weight:500">${fmt(r.capex)}</td><td class="mono ${r.cg<0?'neg':''}">${pct(r.cg)}</td><td class="mono">${fmt(r.dep)}</td><td class="mono">${(r.ci*100).toFixed(0)}%</td></tr>`;
+  });
+  document.getElementById('tbl').innerHTML=h;
+  document.querySelectorAll('#tbl input').forEach(inp=>inp.addEventListener('change',e=>{
+    const v=parseFloat(e.target.value.replace(/,/g,'')); if(isNaN(v)) return;
+    st.dem[+e.target.dataset.y]=v; st.manual=true; setTimeout(()=>render(false),0);
+  }));
+}
+function formula(){
+  const r=(st.ratio*100).toFixed(0), L=st.life, k=(st.ratio*L).toFixed(2);
+  const seen = st.mode==='lead'?`需求(t+${st.lead})`: st.mode==='sync'?'需求(t)':'需求(t−1)';
+  document.getElementById('formula').innerHTML=`产能上限(t) = 在役设备原值 ÷ ${k}&nbsp;&nbsp;·&nbsp;&nbsp;<b>实际 ARR(t) = min( 需求(t), 产能上限(t) )</b>
+<br><span class="c">需要量(t)</span> = ${k} × ${seen} − 已在途/在役且届时未到期的设备&nbsp;&nbsp;·&nbsp;&nbsp;capex(t) = ${(st.alpha*100).toFixed(0)}% × capex(t−1) + ${((1-st.alpha)*100).toFixed(0)}% × 需要量(t)&nbsp;&nbsp;·&nbsp;&nbsp;设备 ${st.lead} 年后上架，用 ${L} 年`;
+  document.getElementById('modeHint').textContent=MODES[st.mode].h;
+}
+function render(rebuild=true){
+  if(rebuild){ st.dem=buildDemand(); st.manual=false; } else extend(st.dem);
+  const rows=compute();
+  formula(); lineChart(rows); barChart(rows); kpis(rows); table(rows);
+  document.querySelectorAll('.preset button').forEach(b=>{const p=PRESETS[+b.dataset.i];b.setAttribute('aria-pressed',String(!st.manual&&p.shape===st.shape&&p.mode===st.mode&&p.post===st.post&&p.alpha===Math.round(st.alpha*100)&&p.lead===st.lead));});
+}
+function chips(group,dict,key){
+  const el=document.querySelector(`[data-group="${group}"]`);
+  el.innerHTML=Object.entries(dict).map(([k,v])=>`<button class="chip" data-k="${k}" aria-pressed="${st[key]===k}">${v.n}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{ st[key]=b.dataset.k; el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); render(key==='mode'?!st.manual:true); });
+}
+const setSlider=(id,v,lbl)=>{document.getElementById(id).value=v;document.getElementById(id+'V').textContent=lbl;};
+document.getElementById('presets').innerHTML=PRESETS.map((p,i)=>`<button data-i="${i}">${p.n}<small>${p.d}</small></button>`).join('');
+document.querySelectorAll('.preset button').forEach(b=>b.onclick=()=>{ const p=PRESETS[+b.dataset.i]; st.shape=p.shape; st.mode=p.mode; st.post=p.post; st.alpha=p.alpha/100; st.lead=p.lead;
+  setSlider('alpha',p.alpha,p.alpha+'%'); setSlider('lead',p.lead,p.lead+' 年');
+  chips('shape',SHAPES,'shape'); chips('post',POST,'post'); chips('mode',MODES,'mode'); render(); });
+chips('shape',SHAPES,'shape'); chips('post',POST,'post'); chips('mode',MODES,'mode');
+const bind=(id,fn,lbl,rebuild)=>{ const e=document.getElementById(id); e.addEventListener('input',()=>{ fn(+e.value); document.getElementById(id+'V').textContent=lbl(+e.value); render(rebuild&&!st.manual); }); };
+bind('lead',v=>st.lead=v,v=>v+' 年',false);
+bind('alpha',v=>st.alpha=v/100,v=>v+'%',false);
+bind('ratio',v=>st.ratio=v/100,v=>v+'%',false);
+bind('life',v=>st.life=v,v=>v+' 年',false);
+bind('base',v=>st.base=v,v=>String(v),true);
+render();
+
+// ---------- page 2 ----------
+const P2={
+  years:[], arr:{2021:0,2022:0,2023:0,2024:0,2025:100,2026:1000,2027:2000,2028:5600,2029:9200,2030:12800,2031:16400,2032:20000,2033:20000,2034:20000,2035:20000},
+  cap:{2021:0,2022:0,2023:500,2024:2000,2025:4000,2026:7000,2027:12000},
+  rdHist:{2023:450,2024:1500,2025:2500,2026:4500,2027:5500}, rdFut:5500, rdG:0, arrMode:'linear', arrG:.5, util:.9, reuse:.7, ratio:.30, lifeOld:4, lifeNew:8, spread:true, repMode:'dep', lead:0.2, lastHist:2027, first:2021, last:2032
+};
+for(let y=P2.first;y<=P2.last;y++) P2.years.push(y);
+
+function rdAt(t){ return t<=2027? Math.min(P2.cap[t]||0,P2.rdHist[t]??0) : P2.rdFut*Math.pow(1+P2.rdG,t-2027); }
+function lifeOf(t,src){ src=src||P2; return t<=2027? src.lifeOld : src.lifeNew; }
+function partsSpec(L){ return P2.spread? [[1/3,Math.max(1,L-1)],[1/3,L],[1/3,L+1]] : [[1,L]]; }
+// Everything below works in "depreciation units": a part with cap X and life n supplies X/n of annual depreciation;
+// serving ARR requires r × ARR of annual depreciation (the 30% rule). So longer-lived cohorts need more capex per unit ARR.
+function compute2(){
+  const {arr,ratio:r,reuse:u,lastHist}=P2;
+  const co={}, C={}, parts=[];
+  for(let t=P2.first-8;t<=P2.last;t++){ const hist=t<=lastHist; C[t]=hist?(P2.cap[t]||0):0; }
+  const mk=t=>{const hist=t<=lastHist; if(!hist) C[t]=rdAt(t); const rdv=hist?Math.min(C[t],P2.rdHist[t]??0):rdAt(t); const inf=C[t]-rdv; const L=lifeOf(t);
+    const c={t,L,cap:C[t],rd:rdv,inf,committed:0,pool:inf,atArrival:0,rep:0,grow:0,usedLater:0,wasted:0,hist,shortfall:0,parts:[]};
+    partsSpec(L).forEach(([w,life])=>{ const pt={t,life,cap:C[t]*w,inf:inf*w,committedD:0,poolD:inf*w/life,w}; c.parts.push(pt); parts.push(pt); });
+    co[t]=c; };
+  for(let t=P2.first-8;t<=lastHist;t++) mk(t);
+  const rows=[];
+  for(let y=P2.first;y<=P2.last+1;y++){
+    const t0=y-1; if(!co[t0]) mk(t0);
+    const need=r*(arr[y]||0)/P2.util;              // annual depreciation that ARR can carry, grossed up for utilization
+    const alive=parts.filter(pt=>y>=pt.t+1&&y<=pt.t+pt.life).sort((a,b)=>a.t-b.t);
+    let gap=need-alive.reduce((a,c)=>a+c.committedD,0);
+    let retiredLeft=parts.filter(pt=>pt.t+pt.life===y-1).reduce((a,c)=>a+c.committedD,0);
+    const nc=co[t0];
+    if(!nc.hist && P2.repMode==='dep'){
+      // 与第③页同一套存量账：明年需要的推理折旧 = 30%×ARR(明年)÷利用率；已有且明年仍在役的推理设备提供多少折旧；缺口 × 新寿命 = 今年要买的推理 capex。
+      // "更新"= 当年在役推理设备的账面折旧（维持性 capex 的定义），"增量"= 买入量超出折旧的部分；两者之和就是存量账要求的总量，不会多买。
+      parts.forEach(pt=>{ if(pt.poolD>0){ pt.committedD+=pt.poolD; const c=co[pt.t]; c.committed+=pt.poolD*pt.life; c.usedLater+=pt.poolD*pt.life; c.pool-=pt.poolD*pt.life; pt.poolD=0; } });
+      const y1=t0+1;
+      let maint=0; parts.filter(pt=>pt.t!==t0 && t0>=pt.t+1 && t0<=pt.t+pt.life).forEach(pt=>{ maint+=pt.inf/pt.life; });
+      let existD=0; parts.filter(pt=>pt.t!==t0 && y1>=pt.t+1 && y1<=pt.t+pt.life).forEach(pt=>{ existD+=pt.inf/pt.life; });
+      const needD=r*(arr[y1]||0)/P2.util;
+      const gapD=Math.max(0,needD-existD);
+      const avgInvLife=partsSpec(P2.lifeNew).reduce((a,[w,l])=>a+w/l,0);   // 分批退役时的平均折旧率
+      const gap1Cap=gapD/avgInvLife;                                          // 只为明年 ARR 需要买的量
+      // 提前建设：按 t0+1+lead 年的 ARR 需求下单，多出来的部分先闲置、后被用上（橙色）
+      let infCap=gap1Cap;
+      if(P2.lead>0){ const yL=y1+1; let existL=0; parts.filter(pt=>pt.t!==t0 && yL>=pt.t+1 && yL<=pt.t+pt.life).forEach(pt=>{ existL+=pt.inf/pt.life; });
+        const needL=r*(arr[yL]||0)/P2.util; const capL=Math.max(0,needL-existL)/avgInvLife;   // 如果要把后年也买齐需要多少
+        infCap=gap1Cap+P2.lead*Math.max(0,capL-gap1Cap); }                                    // 只提前买其中的 20–30%
+      const repCap=Math.min(infCap,maint), growCap=Math.max(0,Math.min(infCap,gap1Cap)-repCap), aheadCap=infCap-repCap-growCap;
+      nc.parts.forEach(pt=>{ pt.cap+=infCap*pt.w; pt.inf+=infCap*pt.w; pt.committedD+=infCap*pt.w/pt.life; pt.poolD=0; });
+      nc.cap+=infCap; C[t0]=nc.cap; nc.inf+=infCap; nc.committed+=infCap; nc.atArrival+=repCap+growCap; nc.usedLater+=aheadCap; nc.rep+=repCap; nc.grow+=growCap; nc.pool=0;
+      if(y<=P2.last){ let dep=0; parts.filter(pt=>y>=pt.t+1&&y<=pt.t+pt.life).forEach(pt=>{ dep+=pt.cap/pt.life; }); rows.push({y,arr:arr[y]||0,dep,ratio:arr[y]>0?dep/arr[y]:null,shortfall:0,need}); }
+      continue;
+    }
+    const split=(c,takeD,life)=>{const rp=Math.min(takeD,retiredLeft); c.rep+=rp*life; c.grow+=(takeD-rp)*life; retiredLeft-=rp;};
+    if(gap>0 && nc.hist){ for(const pt of nc.parts){ const takeD=Math.min(gap,pt.poolD); pt.committedD+=takeD; pt.poolD-=takeD; nc.committed+=takeD*pt.life; nc.atArrival+=takeD*pt.life; nc.pool-=takeD*pt.life; split(nc,takeD,pt.life); gap-=takeD; if(gap<=0) break; } }
+    if(gap>0){ for(const pt of alive){ if(pt.t===t0) continue; if(pt.poolD<=0) continue; const c=co[pt.t];
+      const usable=pt.poolD*u; const takeD=Math.min(gap,usable); const consumedD=u>0?takeD/u:0;
+      pt.committedD+=takeD; pt.poolD-=consumedD; c.committed+=takeD*pt.life; c.usedLater+=takeD*pt.life; c.wasted+=(consumedD-takeD)*pt.life; c.pool-=consumedD*pt.life; gap-=takeD; retiredLeft=Math.max(0,retiredLeft-takeD); if(gap<=0) break; } }
+    if(gap>0){ if(!nc.hist){ // buy exactly what is missing, at the new cohort's life
+        let bought=0; nc.parts.forEach(pt=>{ const capAdd=gap*pt.w*pt.life; pt.cap+=capAdd; pt.inf+=capAdd; pt.committedD+=gap*pt.w; bought+=capAdd; });
+        nc.cap+=bought; C[t0]=nc.cap; nc.inf+=bought; nc.committed+=bought; nc.atArrival+=bought; const rp=Math.min(gap,retiredLeft); nc.rep+=rp/gap*bought; nc.grow+=(gap-rp)/gap*bought; retiredLeft-=rp; gap=0; }
+      else { nc.shortfall=gap/r; } }
+    if(y<=P2.last){
+      let dep=0; parts.filter(pt=>y>=pt.t+1&&y<=pt.t+pt.life).forEach(pt=>{ dep+=pt.cap/pt.life; });
+      rows.push({y,arr:arr[y]||0,dep,ratio:arr[y]>0?dep/arr[y]:null,shortfall:nc.shortfall,need});
+    }
+  }
+  const cohorts=P2.years.map(t=>{ const c=co[t]; const unused=Math.max(0,c.pool)+c.wasted; return {...c,unused}; });
+  return {rows,cohorts};
+}
+function chartD1(rows){
+  const W=860,H=280,ml=56,mr=60,mt=30,mb=32, iw=W-ml-mr, ih=H-mt-mb;
+  const rs=rows.filter(r=>r.y>=2023);
+  const max=Math.max(...rs.map(r=>Math.max(r.arr,r.dep)))*1.1;
+  const x=i=>ml+iw*(i+.5)/rs.length, y=v=>mt+ih*(1-v/max), bw=iw/rs.length*.55;
+  const rmax=5; const yr=v=>mt+ih*(1-Math.min(v,rmax)/rmax);
+  let s='';
+  const step=max>15000?5000:2000;
+  for(let v=0;v<=max;v+=step) s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${ml-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--ink2)" font-family="${MONO}">${fmt(v)}</text>`;
+  [0.3,1,2,3,4,5].forEach(v=>{ s+=`<text x="${W-mr+8}" y="${yr(v)+4}" font-size="11" fill="${v===0.3?'var(--arr)':'var(--ink2)'}" font-family="${MONO}">${v===0.3?'30%':v+'00%'}</text>`; });
+  s+=`<line x1="${ml}" x2="${W-mr}" y1="${yr(0.3)}" y2="${yr(0.3)}" stroke="var(--arr)" stroke-dasharray="2 4"/>`;
+  rs.forEach((r,i)=>{ s+=`<rect x="${x(i)-bw/2}" y="${y(r.arr)}" width="${bw}" height="${y(0)-y(r.arr)}" fill="var(--arr-soft)" stroke="var(--arr)"/>`;
+    s+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${r.y}</text>`; });
+  s+=`<polyline points="${rs.map((r,i)=>`${x(i)},${y(r.dep)}`).join(' ')}" fill="none" stroke="var(--dep)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  const rp=rs.filter(r=>r.ratio!=null);
+  s+=`<polyline points="${rp.map(r=>`${x(rs.indexOf(r))},${yr(r.ratio)}`).join(' ')}" fill="none" stroke="var(--ink2)" stroke-width="2" stroke-dasharray="5 4"/>`;
+  rp.forEach(r=>{ const i=rs.indexOf(r); s+=`<text x="${x(i)}" y="${yr(r.ratio)-8}" text-anchor="middle" font-size="11" fill="var(--ink)" font-family="${MONO}">${r.ratio>=1?(r.ratio*100).toFixed(0)+'%':(r.ratio*100).toFixed(0)+'%'}</text>`; });
+  document.getElementById('d1').innerHTML=s;
+}
+function chartD2(cs){
+  const W=860,H=320,ml=56,mr=16,mt=20,mb=32, iw=W-ml-mr, ih=H-mt-mb;
+  const rs=cs.filter(c=>c.t>=2023);
+  const hi=Math.max(...rs.map(c=>c.cap))*1.12;
+  const y=v=>mt+ih*(1-v/hi), x=i=>ml+iw*(i+.5)/rs.length, bw=iw/rs.length*.62;
+  let s='';
+  const step=hi>30000?10000:hi>12000?5000:2000;
+  for(let v=0;v<=hi;v+=step) s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${ml-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--ink2)" font-family="${MONO}">${fmt(v)}</text>`;
+  rs.forEach((c,i)=>{
+    const cx=x(i)-bw/2; let acc=0; const op=1;
+    [[c.rep,'var(--keep)'],[c.grow,'var(--arr)'],[c.usedLater,'var(--cap)'],[c.unused,'var(--waste)'],[c.rd,'var(--rd)']].forEach(([v,f])=>{ if(v>0.5){ s+=`<rect class="bar" x="${cx}" y="${y(acc+v)}" width="${bw}" height="${y(acc)-y(acc+v)}" fill="${f}" opacity="${op}"/>`; acc+=v; } });
+    if(!c.hist) s+=`<rect x="${cx}" y="${y(c.cap)}" width="${bw}" height="${y(0)-y(c.cap)}" fill="none" stroke="var(--ink2)" stroke-dasharray="4 3"/>`;
+    s+=`<text x="${x(i)}" y="${y(c.cap)-6}" text-anchor="middle" font-size="11" fill="var(--ink)" font-family="${MONO}">${fmt(c.cap)}</text>`;
+    s+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${c.t}${c.hist?'':'E'}</text>`;
+  });
+  const hx=x(rs.findIndex(c=>!c.hist))-iw/rs.length/2;
+  s+=`<line x1="${hx}" x2="${hx}" y1="${mt}" y2="${H-mb}" stroke="var(--line)" stroke-dasharray="3 3"/><text x="${hx+6}" y="${mt+12}" font-size="11" fill="var(--ink2)">预测 →</text>`;
+  document.getElementById('d2').innerHTML=s;
+}
+function kpis2(cs,rows){
+  const h=cs.filter(c=>c.hist&&c.t>=2023), f=cs.filter(c=>!c.hist);
+  const sum=(a,k)=>a.reduce((s,c)=>s+c[k],0);
+  const tot=sum(h,'cap');
+  const items=[
+    ['2023–2027 已投 capex',fmt(tot),`认领 ${(sum(h,'atArrival')/tot*100).toFixed(0)}% · 提前后用 ${(sum(h,'usedLater')/tot*100).toFixed(0)}% · 未用 ${(sum(h,'unused')/tot*100).toFixed(0)}% · 非原生 ${(sum(h,'rd')/tot*100).toFixed(0)}%`],
+    ['2028–2032 需再投 capex',fmt(sum(f,'cap')),'更新 '+fmt(sum(f,'rep'))+' · 增量 '+fmt(sum(f,'grow'))+' · 研发 '+fmt(sum(f,'rd'))],
+    ['capex 峰值',fmt(cs.reduce((a,c)=>c.cap>a.cap?c:a,cs[0]).cap),cs.reduce((a,c)=>c.cap>a.cap?c:a,cs[0]).t+' 年'],
+    ['2032E 折旧 / ARR',(rows[rows.length-1].ratio*100).toFixed(0)+'%','纯推理模型为 '+(P2.ratio*100).toFixed(0)+'%，多出的是研发设备的折旧'],
+  ];
+  document.getElementById('kpis2').innerHTML=items.map(([t,n,d])=>`<div class="kpi"><div class="t">${t}</div><div class="n mono">${n}</div><div class="t">${d}</div></div>`).join('');
+}
+function table2(cs,rows){
+  let h=`<tr><th>年份</th><th>ARR</th><th>账面折旧</th><th>折旧 / ARR</th><th>capex</th><th>更新</th><th>增量</th><th>提前·后用</th><th>提前·未用</th><th>非原生/研发</th><th>产能缺口</th></tr>`;
+  cs.filter(c=>c.t>=2023).forEach(c=>{ const r=rows.find(r=>r.y===c.t); const sh=rows.find(r=>r.y===c.t+1);
+    h+=`<tr class="${c.hist?'p1':'p2'}"><td class="mono">${c.t}${c.hist?'':'E'}</td><td class="mono">${fmt(r.arr)}</td><td class="mono">${fmt(r.dep)}</td><td class="mono ${band(r.ratio)}">${r.ratio==null?'—':(r.ratio*100).toFixed(0)+'%'}</td><td class="mono" style="font-weight:500">${fmt(c.cap)}</td><td class="mono">${fmt(c.rep)}</td><td class="mono">${fmt(c.grow)}</td><td class="mono">${fmt(c.usedLater)}</td><td class="mono">${fmt(c.unused)}</td><td class="mono">${fmt(c.rd)}</td><td class="mono ${sh&&sh.shortfall>0.5?'neg':''}">${sh&&sh.shortfall>0.5?fmt(sh.shortfall)+'（'+(c.t+1)+'）':'—'}</td></tr>`; });
+  document.getElementById('tbl2').innerHTML=h;
+}
+function formula2(){
+  document.getElementById('formula2').innerHTML=`推理所需年折旧(t) = ${(P2.ratio*100).toFixed(0)}% × ARR(t)&nbsp;&nbsp;·&nbsp;&nbsp;每批设备年折旧 = 原值 ÷ 寿命（2027 及以前 ${P2.lifeOld} 年，2028 起 ${P2.lifeNew} 年）&nbsp;&nbsp;·&nbsp;&nbsp;每批设备 = <span style="color:var(--keep)">更新</span> + <b>增量</b> + <span style="color:var(--cap)">提前·后用</span> + <span style="color:var(--waste)">提前·未用</span> + <span style="color:var(--rd)">非原生/研发</span>
+<br><span style="color:var(--ink2);font-family:inherit">${P2.repMode==='dep'?`预测年推理 capex(t) = [ ${(P2.ratio*100).toFixed(0)}% ÷ ${(P2.util*100).toFixed(0)}% × ARR(t+1) − 明年仍在役推理设备的折旧 ] × ${P2.lifeNew} 年；其中 更新 = 当年在役推理设备的折旧，增量 = 超出折旧的部分；再加非原生 ${fmt(P2.rdFut)}。与第③页同一套存量账。`:`预测年 capex(t) = [ ${(P2.ratio*100).toFixed(0)}% × ARR(t+1) − 仍在役且已认领设备的年折旧 − 可利用闲置设备的年折旧 × ${(P2.reuse*100).toFixed(0)}% ] × ${P2.lifeNew} 年 + 非原生 ${fmt(P2.rdFut)}`}</span>`;
+}
+const RD_PRESETS=[
+  {n:'爬到 5500 后维持',v:{2023:450,2024:1500,2025:2500,2026:4500,2027:5500},f:5500},
+  {n:'偏低 · 3500',v:{2023:300,2024:1000,2025:1800,2026:3000,2027:3500},f:3500},
+  {n:'偏高 · 7500',v:{2023:450,2024:1800,2025:3500,2026:6000,2027:7500},f:7500},
+];
+function rdTable(){
+  const el=document.getElementById('rdTable');
+  el.innerHTML='<tr><td style="color:var(--ink2)">年份</td><td style="color:var(--ink2)">非原生 金额</td><td>占比 / 留给原生推理</td></tr>'+[2023,2024,2025,2026,2027].map(y=>{const c=P2.cap[y]||0,a=Math.min(c,P2.rdHist[y]??0);return `<tr><td class="mono">${y}</td><td><input class="mono" data-y="${y}" value="${Math.round(a)}" inputmode="numeric"></td><td class="mono">${c>0?(a/c*100).toFixed(0):0}% / ${fmt(c-a)}</td></tr>`;}).join('');
+  el.querySelectorAll('input').forEach(inp=>inp.addEventListener('change',e=>{const v=parseFloat(e.target.value.replace(/,/g,''));if(isNaN(v))return;P2.rdHist[+e.target.dataset.y]=Math.max(0,v);markRd();setTimeout(render2,0);}));
+}
+function markRd(){ document.querySelectorAll('#rdPresets .chip').forEach(b=>{const p=RD_PRESETS[+b.dataset.i];b.setAttribute('aria-pressed',String([2023,2024,2025,2026,2027].every(y=>Math.abs((P2.rdHist[y]??0)-p.v[y])<0.5)&&P2.rdFut===p.f));}); }
+const ARR_PRESETS=[
+  {id:'linear',n:'线性：从 2027 年的数每年等额加到 2032 年 2 万亿'},
+  {id:'cagr',n:'固定增速（用滑杆）'},
+  {id:'front',n:'前高后低：+100 / +60 / +40 / +25 / +15%'},
+  {id:'double',n:'翻倍三年后放缓：+100 / +100 / +100 / +30 / +10%'},
+  {id:'slow',n:'温和：+40%/年'},
+];
+function applyArrPreset(){
+  const a=P2.arr; a[2026]=a[2026]||1000; a[2027]=a[2027]||2000;
+  const m=P2.arrMode;
+  if(m==='linear'){ for(let y=2028;y<=2032;y++) a[y]=a[2027]+(20000-a[2027])*(y-2027)/5; }
+  else { const gs = m==='cagr'? [P2.arrG,P2.arrG,P2.arrG,P2.arrG,P2.arrG] : m==='front'? [1,.6,.4,.25,.15] : m==='double'? [1,1,1,.3,.1] : [.4,.4,.4,.4,.4];
+    let v=a[2027]; [2028,2029,2030,2031,2032].forEach((y,i)=>{ v=v*(1+gs[i]); a[y]=Math.round(v); }); }
+  for(let y=2033;y<=2035;y++) a[y]=a[2032];
+  document.querySelectorAll('#arrInputs input').forEach(inp=>{ inp.value=Math.round(a[+inp.dataset.y]); });
+  document.getElementById('arrGRow').style.opacity = m==='cagr'?1:.45;
+}
+function markArr(){ document.querySelectorAll('#arrPresets .chip').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===P2.arrMode))); }
+function inputs2(){
+  const ai=document.getElementById('arrInputs'), ci=document.getElementById('capInputs');
+  const ap=document.getElementById('arrPresets');
+  if(!ap.children.length){ ap.innerHTML=ARR_PRESETS.map(p=>`<button class="chip" data-id="${p.id}">${p.n}</button>`).join(''); ap.querySelectorAll('button').forEach(b=>b.onclick=()=>{ P2.arrMode=b.dataset.id; markArr(); applyArrPreset(); render2(); }); markArr();
+    const g=document.getElementById('arrG'); g.addEventListener('input',()=>{ P2.arrG=+g.value/100; document.getElementById('arrGV').textContent='+'+g.value+'%'; if(P2.arrMode!=='cagr'){ P2.arrMode='cagr'; markArr(); } applyArrPreset(); render2(); }); }
+  const rp=document.getElementById('rdPresets');
+  if(!rp.children.length){ rp.innerHTML=RD_PRESETS.map((p,i)=>`<button class="chip" data-i="${i}">${p.n}</button>`).join(''); rp.querySelectorAll('button').forEach(b=>b.onclick=()=>{const pr=RD_PRESETS[+b.dataset.i];P2.rdHist={...pr.v};P2.rdFut=pr.f;document.getElementById('rdFut').value=pr.f;document.getElementById('rdFutV').textContent=String(pr.f);markRd();render2();}); markRd(); }
+  rdTable();
+  if(!ai.children.length){
+    for(let y=2024;y<=2032;y++) ai.insertAdjacentHTML('beforeend',`<label class="${y>2026?'f':''}"><span>${y}${y>2026?'E':''}</span><input class="mono" data-k="arr" data-y="${y}" value="${P2.arr[y]}" inputmode="numeric"></label>`);
+    for(let y=2023;y<=2027;y++) ci.insertAdjacentHTML('beforeend',`<label class="${y===2027?'f':''}"><span>${y}${y===2027?'（约）':''}</span><input class="mono" data-k="cap" data-y="${y}" value="${P2.cap[y]}" inputmode="numeric"></label>`);
+    document.querySelectorAll('#page2 .grid2 input').forEach(inp=>inp.addEventListener('change',e=>{ const v=parseFloat(e.target.value.replace(/,/g,'')); if(isNaN(v)) return; P2[e.target.dataset.k][+e.target.dataset.y]=v; if(e.target.dataset.k==='arr'){ if(+e.target.dataset.y===2027 && P2.arrMode!=='manual'){ applyArrPreset(); } else { P2.arrMode='manual'; markArr(); } if(+e.target.dataset.y===2032){P2.arr[2033]=P2.arr[2034]=P2.arr[2035]=v;} } setTimeout(render2,0); }));
+  }
+}
+function render2(){ inputs2(); const {rows,cohorts}=compute2(); formula2(); chartD1(rows); chartD2(cohorts); kpis2(cohorts,rows); table2(cohorts,rows); }
+const bind2=(id,fn,lbl)=>{ const e=document.getElementById(id); e.addEventListener('input',()=>{ fn(+e.value); document.getElementById(id+'V').textContent=lbl(+e.value); render2(); }); };
+bind2('rdFut',v=>P2.rdFut=v,v=>String(v)); bind2('reuse',v=>P2.reuse=v/100,v=>v+'%'); bind2('util2',v=>{P2.util=v/100;P3.util=v/100;const e=document.getElementById('util3');e.value=v;document.getElementById('util3V').textContent=v+'%';},v=>v+'%');
+bind2('ratio2',v=>P2.ratio=v/100,v=>v+'%');
+document.querySelectorAll('#rdGChips .chip').forEach(b=>{ b.setAttribute('aria-pressed',String(+b.dataset.v===P2.rdG)); b.onclick=()=>{ P2.rdG=+b.dataset.v; document.querySelectorAll('#rdGChips .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); render2(); }; });
+document.querySelectorAll('#leadChips .chip').forEach(b=>{ b.setAttribute('aria-pressed',String(+b.dataset.v===P2.lead)); b.onclick=()=>{ P2.lead=+b.dataset.v; document.querySelectorAll('#leadChips .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); render2(); }; });
+document.querySelectorAll('#repChips .chip').forEach(b=>{ b.setAttribute('aria-pressed',String(b.dataset.v===P2.repMode)); b.onclick=()=>{ P2.repMode=b.dataset.v; document.querySelectorAll('#repChips .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); render2(); }; });
+document.querySelectorAll('#spreadChips .chip').forEach(b=>{ b.setAttribute('aria-pressed',String((b.dataset.v==='1')===P2.spread)); b.onclick=()=>{ P2.spread=b.dataset.v==='1'; document.querySelectorAll('#spreadChips .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); render2(); }; }); [['lifeOld',[4,5,6,7,8]],['lifeNew',[4,5,6,7,8]]].forEach(([key,opts])=>{ const el=document.querySelector(`#page2 [data-life="${key}"]`); el.innerHTML=opts.map(v=>`<button class="chip" data-v="${v}" aria-pressed="${P2[key]===v}">${v} 年</button>`).join(''); el.querySelectorAll('button').forEach(b=>b.onclick=()=>{ P2[key]=+b.dataset.v; el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); render2(); }); });
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x===b)); ['page1','page2','page3','page4'].forEach(id=>document.getElementById(id).hidden=b.dataset.page!==id); if(b.dataset.page==='page3') render3(); if(b.dataset.page==='page4') render4(); try{localStorage.setItem('arrcapex.page',b.dataset.page)}catch(e){} });
+
+// ---------- page 3 ----------
+const P3={cap:{2028:11500,2029:11000,2030:10500,2031:10000,2032:9500}, util:.9, ratio:.30, lifeOld:4, lifeNew:8, repMode:'dep'};
+const CAP_PRESETS=[
+  {n:'微弱下滑 −5%/年',g:-0.05},{n:'持平',g:0},{n:'温和增长 +10%/年',g:0.10},{n:'较快增长 +25%/年',g:0.25},
+];
+function applyCapPreset(g){ let v=P2.cap[2027]; for(let y=2028;y<=2032;y++){ v=v*(1+g); P3.cap[y]=Math.round(v/50)*50; } }
+function compute3(){
+  const r=P3.ratio,u=P3.util; const C={},RD={},INF={};
+  for(let y=2014;y<=2032;y++){ C[y]= y<=2027?(P2.cap[y]||0):(P3.cap[y]||0); RD[y]= Math.min(C[y],rdAt(y)); INF[y]=C[y]-RD[y]; }
+  const rows=[]; let prev=null;
+  for(let y=2024;y<=2033;y++){
+    let D=0, S=0, ret=0, Dtot=0, Dcy=0;   // D: 在役推理设备年折旧; Dtot: 全部在役设备年折旧; Dcy: capex 年当年的推理设备折旧（=按折旧额口径的更新）
+    for(let t=2014;t<y;t++){ partsSpec(lifeOf(t,P3)).forEach(([w,life])=>{ if(y>=t+1&&y<=t+life){ D+=INF[t]*w/life; S+=INF[t]*w; Dtot+=C[t]*w/life; } if(y-1>=t+1&&y-1<=t+life) Dcy+=INF[t]*w/life; if(t+life===y-1) ret+=INF[t]*w; }); }
+    const arr=D*u/r; const g=prev?arr/prev-1:null; prev=arr;
+    const cy=y-1; const maint=P3.repMode==='dep'?Dcy:ret;
+    rows.push({y,arr,g,S,exp:P2.arr[y]||0,cy,cap:C[cy],rd:RD[cy],inf:INF[cy],retire:maint,net:INF[cy]-maint,dtot:Dtot,tratio:arr>0?Dtot/arr:null});
+  }
+  return rows;
+}
+function chartE1(rows){
+  const W=860,H=300,ml=56,mr=60,mt=28,mb=32, iw=W-ml-mr, ih=H-mt-mb;
+  const rs=rows.filter(r=>r.y>=2025&&r.y<=2033);
+  const max=Math.max(...rs.map(r=>Math.max(r.arr,r.exp)))*1.12;
+  const x=i=>ml+iw*(i+.5)/rs.length, y=v=>mt+ih*(1-v/max), bw=iw/rs.length*.55;
+  const gmax=Math.max(1,...rs.filter(r=>r.y>=2027&&r.g!=null).map(r=>Math.abs(r.g)))*1.15; const yg=v=>mt+ih*(1-(v+gmax)/(2*gmax));
+  let s=''; const step=max>30000?10000:max>12000?5000:2000;
+  for(let v=0;v<=max;v+=step) s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${ml-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--ink2)" font-family="${MONO}">${fmt(v)}</text>`;
+  s+=`<line x1="${ml}" x2="${W-mr}" y1="${yg(0)}" y2="${yg(0)}" stroke="var(--ink2)" stroke-dasharray="2 4" opacity=".5"/>`;
+  [-1,-.5,0,.5,1].forEach(v=>{ if(Math.abs(v)<=gmax) s+=`<text x="${W-mr+8}" y="${yg(v)+4}" font-size="11" fill="var(--ink2)" font-family="${MONO}">${v>0?'+':''}${v*100}%</text>`; });
+  rs.forEach((r,i)=>{ s+=`<rect class="bar" x="${x(i)-bw/2}" y="${y(r.arr)}" width="${bw}" height="${y(0)-y(r.arr)}" fill="var(--arr-soft)" stroke="var(--arr)"/>`;
+    s+=`<text x="${x(i)}" y="${y(r.arr)-6}" text-anchor="middle" font-size="11" fill="var(--arr)" font-family="${MONO}">${fmt(r.arr)}</text>`;
+    s+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${r.y}${r.y>=2028?'E':''}</text>`; });
+  s+=`<polyline points="${rs.map((r,i)=>`${x(i)},${y(r.exp)}`).join(' ')}" fill="none" stroke="var(--dem)" stroke-width="2" stroke-dasharray="6 4"/>`;
+  const gr=rs.filter(r=>r.y>=2027&&r.g!=null);
+  s+=`<polyline points="${gr.map(r=>`${x(rs.indexOf(r))},${yg(r.g)}`).join(' ')}" fill="none" stroke="var(--ink2)" stroke-width="2"/>`;
+  gr.forEach(r=>{ const i=rs.indexOf(r); s+=`<circle cx="${x(i)}" cy="${yg(r.g)}" r="3" fill="var(--ink2)"/><text x="${x(i)+6}" y="${yg(r.g)-6}" font-size="11" fill="var(--ink)" font-family="${MONO}">${pct(r.g)}</text>`; });
+  document.getElementById('e1').innerHTML=s;
+}
+function chartE2(rows){
+  const W=860,H=280,ml=56,mr=16,mt=20,mb=32, iw=W-ml-mr, ih=H-mt-mb;
+  const rs=rows.filter(r=>r.cy>=2024&&r.cy<=2032);
+  const hi=Math.max(...rs.map(r=>r.cap))*1.12, lo=Math.min(0,...rs.map(r=>r.net))*1.12;
+  const x=i=>ml+iw*(i+.5)/rs.length, y=v=>mt+ih*(hi-v)/(hi-lo), bw=iw/rs.length*.62;
+  let s=''; const step=hi>12000?5000:2000;
+  for(let v=Math.ceil(lo/step)*step;v<=hi;v+=step) s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${ml-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--ink2)" font-family="${MONO}">${fmt(v)}</text>`;
+  rs.forEach((r,i)=>{ const cx=x(i)-bw/2; const rep=Math.min(r.inf,r.retire); const op=1; let acc=0;
+    s+=`<rect class="bar" x="${cx}" y="${y(rep)}" width="${bw}" height="${y(0)-y(rep)}" fill="var(--keep)" opacity="${op}"/>`; acc=rep;
+    if(r.net>0){ s+=`<rect class="bar" x="${cx}" y="${y(acc+r.net)}" width="${bw}" height="${y(acc)-y(acc+r.net)}" fill="var(--arr)" opacity="${op}"/>`; acc+=r.net; }
+    else if(r.net<-1){ s+=`<rect class="bar" x="${cx}" y="${y(0)}" width="${bw}" height="${y(r.net)-y(0)}" fill="var(--neg-soft)" stroke="var(--neg)" stroke-dasharray="3 3"/>`; }
+    s+=`<rect class="bar" x="${cx}" y="${y(acc+r.rd)}" width="${bw}" height="${y(acc)-y(acc+r.rd)}" fill="var(--rd)" opacity="${op}"/>`;
+    if(r.cy>=2028) s+=`<rect x="${cx}" y="${y(r.cap)}" width="${bw}" height="${y(0)-y(r.cap)}" fill="none" stroke="var(--ink2)" stroke-dasharray="4 3"/>`;
+    s+=`<text x="${x(i)}" y="${y(r.cap)-6}" text-anchor="middle" font-size="11" fill="var(--ink)" font-family="${MONO}">${fmt(r.cap)}</text>`;
+    s+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${r.cy}${r.cy>=2028?'E':''}</text>`; });
+  s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)"/>`;
+  document.getElementById('e2').innerHTML=s;
+}
+function kpis3(rows){
+  const by=y=>rows.find(r=>r.y===y);
+  const g=rows.filter(r=>r.y>=2028&&r.y<=2032).map(r=>r.g);
+  const cagr=Math.pow(by(2032).arr/by(2027).arr,1/5)-1;
+  const peak=rows.reduce((a,r)=>r.arr>a.arr?r:a,rows[0]);
+  const items=[
+    ['2027 隐含 ARR',fmt(by(2027).arr),'由 2024–2026 推理 capex 决定，对照你预期的 '+fmt(by(2027).exp)],
+    ['2032E 隐含 ARR',fmt(by(2032).arr),'对照预期 '+fmt(by(2032).exp)],
+    ['2027→2032 隐含 CAGR',pct(cagr),'逐年：'+g.map(pct).join(' · ')],
+    ['2032E 总折旧 / ARR',by(2032).tratio==null?'—':(by(2032).tratio*100).toFixed(0)+'%','含非原生设备折旧；你的可接受区间 30–70%'],
+  ];
+  document.getElementById('kpis3').innerHTML=items.map(([t,n,d])=>`<div class="kpi"><div class="t">${t}</div><div class="n mono">${n}</div><div class="t">${d}</div></div>`).join('');
+}
+function table3(rows){
+  let h=`<tr><th>ARR 年份</th><th>capex 年份</th><th>总 capex</th><th>非原生</th><th>推理 capex</th><th>更新（到期/折旧）</th><th>推理净增量</th><th>在役推理原值</th><th>隐含 ARR 上限</th><th>同比</th><th>总折旧 / ARR</th><th>你预期的 ARR</th></tr>`;
+  rows.filter(r=>r.y>=2025).forEach(r=>{ h+=`<tr class="${r.y<=2027?'p1':'p2'}"><td class="mono">${r.y}${r.y>=2028?'E':''}</td><td class="mono">${r.cy}</td><td class="mono">${fmt(r.cap)}</td><td class="mono">${fmt(r.rd)}</td><td class="mono">${fmt(r.inf)}</td><td class="mono">${fmt(r.retire)}</td><td class="mono ${r.net<0?'neg':''}">${fmt(r.net)}</td><td class="mono">${fmt(r.S)}</td><td class="mono" style="font-weight:500">${fmt(r.arr)}</td><td class="mono ${r.g<0?'neg':''}">${r.g==null?'—':pct(r.g)}</td><td class="mono ${band(r.tratio)}">${r.tratio==null?'—':(r.tratio*100).toFixed(0)+'%'}</td><td class="mono">${fmt(r.exp)}</td></tr>`; });
+  document.getElementById('tbl3').innerHTML=h;
+}
+function capTable(){
+  const el=document.getElementById('capTable');
+  el.innerHTML='<tr><td style="color:var(--ink2)">年份</td><td style="color:var(--ink2)">总 capex</td><td>同比 / 推理部分</td></tr>'+[2028,2029,2030,2031,2032].map(y=>{const c=P3.cap[y],p=y===2028?P2.cap[2027]:P3.cap[y-1];return `<tr><td class="mono">${y}E</td><td><input class="mono" data-y="${y}" value="${Math.round(c)}" inputmode="numeric"></td><td class="mono">${pct(c/p-1)} / ${fmt(Math.max(0,c-rdAt(y)))}</td></tr>`;}).join('');
+  el.querySelectorAll('input').forEach(inp=>inp.addEventListener('change',e=>{const v=parseFloat(e.target.value.replace(/,/g,''));if(isNaN(v))return;P3.cap[+e.target.dataset.y]=Math.max(0,v);markCap();setTimeout(render3,0);}));
+}
+function markCap(){ document.querySelectorAll('#capPresets .chip').forEach(b=>{ const g=CAP_PRESETS[+b.dataset.i].g; let v=P2.cap[2027],ok=true; for(let y=2028;y<=2032;y++){ v=v*(1+g); if(Math.abs(P3.cap[y]-Math.round(v/50)*50)>0.5) ok=false; } b.setAttribute('aria-pressed',String(ok)); }); }
+function formula3(){ document.getElementById('formula3').innerHTML=`隐含 ARR(t) = 在役推理设备的年折旧合计 × ${(P3.util*100).toFixed(0)}% ÷ ${(P3.ratio*100).toFixed(0)}%&nbsp;&nbsp;·&nbsp;&nbsp;每批设备年折旧 = 推理capex ÷ 该批寿命（2027 及以前 ${P3.lifeOld} 年，2028 起 ${P3.lifeNew} 年）
+<br><span style="color:var(--ink2);font-family:inherit">ARR 上限增长 ⇔ 新买设备的年折旧 &gt; 当年退役设备的年折旧；总 capex 持平时，ARR 在一个寿命周期后见顶。寿命拉长 = 同样 capex 每年摊得少，能撑的 ARR 也按比例变少，但撑得更久。</span>`; if(!document.querySelector('#page3 [data-life3="lifeOld"]').children.length){ [['lifeOld',[4,5,6,7,8]],['lifeNew',[4,5,6,7,8]]].forEach(([key,opts])=>{ const el=document.querySelector(`#page3 [data-life3="${key}"]`); el.innerHTML=opts.map(v=>`<button class="chip" data-v="${v}" aria-pressed="${P3[key]===v}">${v} 年</button>`).join(''); el.querySelectorAll('button').forEach(b=>b.onclick=()=>{ P3[key]=+b.dataset.v; el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); render3(); }); }); } document.getElementById('rdFut3').textContent=fmt(P2.rdFut)+(P2.rdG?`（之后每年 ${P2.rdG>0?'+':''}${Math.round(P2.rdG*100)}%）`:'（之后持平）'); const rc=document.getElementById('repChips3'); if(!rc.dataset.b){ rc.dataset.b=1; rc.querySelectorAll('.chip').forEach(b=>{ b.setAttribute('aria-pressed',String(b.dataset.v===P3.repMode)); b.onclick=()=>{ P3.repMode=b.dataset.v; rc.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); render3(); }; }); } document.getElementById('spread3').textContent=P2.spread?'分批退役':'整批到期'; }
+function render3(){
+  const cp=document.getElementById('capPresets');
+  if(!cp.children.length){ cp.innerHTML=CAP_PRESETS.map((p,i)=>`<button class="chip" data-i="${i}">${p.n}</button>`).join(''); cp.querySelectorAll('button').forEach(b=>b.onclick=()=>{applyCapPreset(CAP_PRESETS[+b.dataset.i].g);markCap();render3();}); markCap(); }
+  capTable(); const rows=compute3(); formula3(); chartE1(rows); chartE2(rows); kpis3(rows); table3(rows);
+}
+const bind3=(id,fn,lbl)=>{ const e=document.getElementById(id); e.addEventListener('input',()=>{ fn(+e.value); document.getElementById(id+'V').textContent=lbl(+e.value); render3(); }); };
+bind3('util3',v=>{P3.util=v/100;P2.util=v/100;const e=document.getElementById('util2');e.value=v;document.getElementById('util2V').textContent=v+'%';},v=>v+'%'); bind3('ratio3',v=>P3.ratio=v/100,v=>v+'%'); 
+
+// ---------- page 4 ----------
+const SC=[
+  // name, pool(万亿美元), take(对整个价值池；除 coding 外一律 5%), penetration(2026 基准，按 2026 年 AI ARR 校准), group, basis
+  ['软件开发：程序员工资 + IT 服务',3.5,.07,.30,'知识工作','工资 2.0 + IT 服务 1.5'],
+  ['客服 / 呼叫中心',0.8,.05,.14,'知识工作','坐席工资 + BPO'],
+  ['销售与营销人力',2.5,.05,.03,'知识工作','工资'],
+  ['金融、保险、会计、审计',4.0,.05,.025,'知识工作','从业者工资 + 会计审计服务'],
+  ['法律服务',1.3,.05,.025,'知识工作','律所收入 + 企业法务'],
+  ['医疗：医护与行政人力',5.0,.05,.006,'知识工作','全球医疗支出中的人力'],
+  ['教育：教师与培训人力',4.0,.05,.012,'知识工作','全球教育支出中的人力'],
+  ['一般行政、管理、文员岗',8.0,.05,.008,'知识工作','工资'],
+  ['政府与公共行政人力',4.0,.05,.0012,'知识工作','公共行政工资（不含教育医疗）'],
+  ['广告：全球广告支出',1.3,.05,.06,'平台与内容','WARC 2026 预测'],
+  ['电商与零售：平台收入（非 GMV）',1.5,.05,.018,'平台与内容','亚马逊等平台自身收入'],
+  ['本地生活 / 外卖：平台收入',0.2,.05,.015,'平台与内容','平台佣金与广告收入'],
+  ['影视、游戏、音乐、设计与营销内容制作',1.3,.05,.043,'平台与内容','行业收入'],
+  ['消费者直接付费（助手、陪伴、创作、娱乐）',1.0,.05,.20,'平台与内容','消费者数字支出'],
+  ['科研与研发：全球 R&D 支出',3.0,.05,.0064,'科研与物理世界','WIPO/GII 2023'],
+  ['机器人：制造与物流人力',15.0,.05,.0003,'科研与物理世界','制造 12 + 物流 3 的人力'],
+];
+const P4={rows:SC.map(r=>({n:r[0],pool:r[1],take:r[2],unlock:r[3],g:r[4],basis:r[5]})),takeMul:1,unlockMul:1};
+const P4_PRESETS=[
+  {n:'2026 现状（校准到约 1100 亿）',d:'表里的原始渗透率',t:1,u:1},
+  {n:'渗透率 ×4',d:'相当于 coding 今天的程度扩散到多数白领场景',t:1,u:4},
+  {n:'渗透 100%',d:'所有场景做透，抽成不变',t:1,u:100},
+  {n:'渗透 100% + 抽成翻倍',d:'AI 开始接管责任',t:2,u:100},
+  {n:'渗透 100% + 抽成 ×3',d:'外包式定价',t:3,u:100},
+];
+function calc4(tm,um){ const rows=P4.rows.map(r=>{ const unlock=um>=30?1:Math.min(1,r.unlock*um); const take=Math.min(1,r.take*tm); const full=r.pool*10000*take; return {...r,arr:full*unlock,full,u:unlock,t:take}; }); return {rows,total:rows.reduce((a,r)=>a+r.arr,0),fullTotal:rows.reduce((a,r)=>a+r.full,0)}; }
+function chartF1(res){
+  const W=860,H=560,ml=230,mr=250,mt=24,mb=30, iw=W-ml-mr, ih=H-mt-mb;
+  const rows=res.rows; const n=rows.length; const rh=ih/n;
+  const lo=Math.log10(1), hi=Math.log10(200000); // 1 亿 … 20 万亿
+  const x=v=>ml+iw*(Math.log10(Math.max(1,v))-lo)/(hi-lo);
+  const col={'知识工作':'var(--arr)','平台与内容':'var(--cap)','科研与物理世界':'var(--rd)'};
+  let s='';
+  [[10,'10 亿'],[100,'100 亿'],[1000,'1000 亿'],[10000,'1 万亿'],[100000,'10 万亿']].forEach(([v,l])=>{ s+=`<line x1="${x(v)}" x2="${x(v)}" y1="${mt}" y2="${H-mb}" stroke="var(--grid)"/><text x="${x(v)}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${l}</text>`; });
+  s+=`<text x="${ml}" y="${mt-8}" font-size="11" fill="var(--ink2)">对数刻度 · 每格 10 倍</text>`;
+  rows.forEach((r,i)=>{ const y=mt+rh*i+rh*.15, h=rh*.7; const pool=r.pool*10000;
+    s+=`<rect x="${x(1)}" y="${y}" width="${x(pool)-x(1)}" height="${h}" fill="var(--waste)" opacity=".55"/>`;
+    s+=`<rect x="${x(1)}" y="${y}" width="${Math.max(0,x(r.full)-x(1))}" height="${h}" fill="${col[r.g]}" opacity=".45"/>`;
+    s+=`<rect class="bar" x="${x(1)}" y="${y}" width="${Math.max(0,x(r.arr)-x(1))}" height="${h}" fill="${col[r.g]}"/>`;
+    s+=`<text x="${ml-8}" y="${y+h/2+4}" text-anchor="end" font-size="11" fill="var(--ink)">${r.n}</text>`;
+    s+=`<text x="${x(pool)+6}" y="${y+h/2+4}" font-size="11" fill="var(--ink2)" font-family="${MONO}">${(r.pool).toFixed(1)}万亿 · 抽成${(r.t*100).toFixed(1)}%→${fmt(r.full)} · 渗透${(r.u*100).toFixed(0)}%→${fmt(r.arr)}</text>`; });
+  document.getElementById('f1').innerHTML=s;
+  document.getElementById('leg4').innerHTML=`<span><i style="background:var(--waste)"></i>行业价值池（全部）</span><span><i style="background:var(--arr);opacity:.45"></i>× 抽成率 = AI 可收走的上限</span><span><i style="background:var(--arr)"></i>× 渗透率 = 当前 AI ARR</span><span style="color:var(--ink2)">颜色：绿=知识工作 橙=平台与内容 紫=科研与物理</span>`;
+}
+function kpis4(res){
+  const need1=res.total>0?1e4/res.total:Infinity, need2=2e4/res.total;
+  const items=[
+    ['当前参数下 AI ARR 合计',fmt(res.total),'亿美元'],
+    ['渗透 100%（抽成不变）的上限',fmt(res.fullTotal),'亿美元 · 要到 1 万亿，抽成需再 ×'+(1e4/res.fullTotal).toFixed(2)+'；到 2 万亿需再 ×'+(2e4/res.fullTotal).toFixed(2)],
+    ['离 1 万亿',res.total>=1e4?'已达到':'还差 '+fmt(1e4-res.total),'亿美元'],
+    ['离 2 万亿',res.total>=2e4?'已达到':'还差 '+fmt(2e4-res.total),'亿美元'],
+  ];
+  document.getElementById('kpis4').innerHTML=items.map(([t,n,d])=>`<div class="kpi"><div class="t">${t}</div><div class="n mono">${n}</div><div class="t">${d}</div></div>`).join('');
+}
+function sens4(){
+  const tms=[0.5,1,1.5,2,3], ums=[1,2,4,8,100];
+  let h='<tr><th style="text-align:left">渗透倍数 ↓ / 抽成倍数 →</th>'+tms.map(t=>`<th>${t}×</th>`).join('')+'</tr>';
+  ums.forEach(u=>{ h+=`<tr><td class="mono" style="text-align:left">${u>=100?'渗透 100%':u+'×'}</td>`+tms.map(t=>{ const v=calc4(t,u).total; const cls=v>=2e4?'ok':v>=1e4?'idle':''; return `<td class="mono ${cls}" style="${v>=2e4?'font-weight:600':''}">${fmt(v)}</td>`; }).join('')+'</tr>'; });
+  document.getElementById('sens4').innerHTML=h;
+}
+function table4(res){
+  let h=`<tr><th style="text-align:left">场景</th><th style="text-align:left">价值池口径</th><th>价值池（亿$）</th><th>抽成率</th><th>渗透率</th><th>= AI 可收走的上限（亿$）</th><th>当前 AI ARR（亿$）</th><th>占合计</th></tr>`;
+  res.rows.forEach((r,i)=>{ h+=`<tr><td>${r.n}</td><td style="text-align:left;color:var(--ink2);font-size:12px">${r.basis}</td><td><input class="mono" data-i="${i}" data-k="pool" value="${Math.round(r.pool*10000)}" inputmode="numeric"></td><td><input class="mono" data-i="${i}" data-k="take" value="${(r.take*100).toFixed(1)}">%</td><td><input class="mono" data-i="${i}" data-k="unlock" value="${Math.round(r.unlock*100)}">%</td><td class="mono">${fmt(r.full)}</td><td class="mono" style="font-weight:500">${fmt(r.arr)}</td><td class="mono">${(r.arr/res.total*100).toFixed(0)}%</td></tr>`; });
+  h+=`<tr><td style="font-weight:600">合计</td><td></td><td class="mono">${fmt(P4.rows.reduce((a,r)=>a+r.pool,0)*10000)}</td><td></td><td></td><td class="mono" style="font-weight:600">${fmt(res.fullTotal)}</td><td class="mono" style="font-weight:600">${fmt(res.total)}</td><td></td></tr>`;
+  const el=document.getElementById('tbl4'); el.innerHTML=h;
+  el.querySelectorAll('input').forEach(inp=>inp.addEventListener('change',e=>{ const v=parseFloat(e.target.value); if(isNaN(v)) return; const r=P4.rows[+e.target.dataset.i], k=e.target.dataset.k; r[k]= k==='pool'? Math.max(0,v)/10000 : Math.min(100,Math.max(0,v))/100; setTimeout(render4,0); }));
+}
+function formula4(){ document.getElementById('formula4').innerHTML=`场景 AI ARR = 行业价值池 × 抽成率 × 渗透率&nbsp;&nbsp;·&nbsp;&nbsp;当前全局：抽成 ${P4.takeMul.toFixed(2)}×，渗透 ${P4.unlockMul>=100?'100%':P4.unlockMul.toFixed(1)+'×'}`; }
+function render4(){
+  const pr=document.getElementById('presets4');
+  if(!pr.children.length){ pr.innerHTML=P4_PRESETS.map((p,i)=>`<button data-i="${i}">${p.n}<small>${p.d}</small></button>`).join(''); pr.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const p=P4_PRESETS[+b.dataset.i]; P4.takeMul=p.t; P4.unlockMul=p.u; document.getElementById('takeMul').value=p.t*100; document.getElementById('takeMulV').textContent=p.t.toFixed(1)+'×'; document.getElementById('unlockMul').value=Math.min(3000,p.u*100); document.getElementById('unlockMulV').textContent=(p.u>=30?'→100%':p.u.toFixed(1)+'×'); render4(); }); }
+  pr.querySelectorAll('button').forEach(b=>{ const p=P4_PRESETS[+b.dataset.i]; b.setAttribute('aria-pressed',String(p.t===P4.takeMul&&p.u===P4.unlockMul)); });
+  const res=calc4(P4.takeMul,P4.unlockMul); formula4(); chartF1(res); kpis4(res); sens4(); table4(res);
+}
+document.getElementById('takeMul').addEventListener('input',e=>{ P4.takeMul=+e.target.value/100; document.getElementById('takeMulV').textContent=P4.takeMul.toFixed(2)+'×'; render4(); });
+document.getElementById('unlockMul').addEventListener('input',e=>{ P4.unlockMul=+e.target.value/100; document.getElementById('unlockMulV').textContent=P4.unlockMul>=30?'→100%':P4.unlockMul.toFixed(1)+'×'; render4(); });
+render2();
+try{ const pg=localStorage.getItem('arrcapex.page'); if(pg==='page2'||pg==='page3'||pg==='page4') document.querySelector('.tab[data-page="'+pg+'"]').click(); }catch(e){}
+</script>
+</body></html>
