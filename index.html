@@ -148,7 +148,7 @@ tr.p2 td:first-child{border-left:3px solid var(--cap)}
 </div><!-- /page1 -->
 
 <div id="page2" hidden>
-  <p class="sub">把已经发生的 capex 和已经看到/预期的 ARR 放在一起：按"纯推理新增折旧占新增收入 30%、三年折旧、设备次年上架"的商业模型，倒算每一年 capex 里有多少被 ARR 认领、多少是提前建设、多少是训练/研发/传统赋能这类不产生原生 ARR 的投入；再往前推出为了兑现未来 ARR 每年还需要买多少。历史列为实线，预测列为虚线框。单位：亿美元。</p>
+  <p class="sub">从 ARR 倒算 CapEx：以 2026 年实际 ARR 为基数，未来 ARR 增量先乘新增折旧 / 新增收入比例，再按设备寿命还原推理净新增投资，最后加上全部设备更新与非原生净新增。计算规则是第三页的逆运算。单位：亿美元。</p>
   <div class="formula mono" id="formula2"></div>
   <div class="layout">
     <div class="panel">
@@ -167,10 +167,9 @@ tr.p2 td:first-child{border-left:3px solid var(--cap)}
       <table class="rdtbl" id="rdTable"></table>
       <div class="row"><span>未来每年非原生</span><input type="range" id="rdFut" min="0" max="10000" step="250" value="5500"><span class="v mono" id="rdFutV">5500</span></div>
       <p class="hint">2028 起每年新增训练/研发/大厂基础盘的 capex（亿美元），不形成原生 ARR；在此之上再按需求买推理产能。第③页共用这个新增预算基数；全部设备更新另列，避免与新增预算混淆。</p>
-      <div class="chips" id="rdGChips" style="margin-top:6px"><button class="chip" data-v="0">之后持平</button><button class="chip" data-v="-0.05">每年 −5%</button><button class="chip" data-v="-0.1">每年 −10%</button><button class="chip" data-v="-0.2">每年 −20%</button><button class="chip" data-v="0.1">每年 +10%</button></div>
-      <div class="lab">2028 起 CapEx 建设提前量（设定）</div>
-      <div class="chips" id="leadChips"><button class="chip" data-v="0">按需：只买明年要用的</button><button class="chip" data-v="0.2">再提前买 20%</button><button class="chip" data-v="0.3">再提前买 30%</button></div>
-      <p class="hint">2027 年总 capex 给定，其提前建设金额由预测 ARR 倒算，不套用下面的比例。2028 年起按所选比例安排提前建设。设备今年买、明年上架。"再提前买 20%"= 除了明年要用的，把后年还要新增的量提前买 20% 进来，提前建设单独列账，不计入当期与收入耦合的推理净新增；本页不再用存量闲置产能冲减新增投资。</p>
+      <div class="lab">非原生新增预算情景（与第三页同规则）</div>
+      <div class="chips" id="rdModes2"><button class="chip" data-v="flat">维持不变</button><button class="chip" data-v="grow">每年增长 10%</button><button class="chip" data-v="split">新增非原生 : 新增推理 = 5:5</button></div>
+      <p class="hint">严格逆算不额外添加提前建设。2028 起总 CapEx = 全部更新 + 非原生净新增 + 推理净新增；历史给定 CapEx 与逆算所需金额的差额单独显示。</p>
       <div class="lab">预测期"更新"口径</div>
       <div class="chips" id="repChips"><button class="chip" data-v="dep">按折旧额：更新 = 当年全部在役设备的账面折旧</button><button class="chip" data-v="cohort">按到期批次：替换上架时退役的全部设备</button></div>
       <p class="hint">与第③页一致，更新覆盖此前全部 capex（推理和非原生），按各批寿命计算。历史非原生总额先拆出其更新；2028 起非原生新增预算与更新分别计算。</p>
@@ -197,7 +196,7 @@ tr.p2 td:first-child{border-left:3px solid var(--cap)}
   </div>
   <div class="panel tablewrap">
     <table id="tbl2"></table>
-    <p class="note">口径：<b>次年 ARR 增量 × 折旧比例 ÷ 该批年折旧率 = 所需推理净新增投资</b>。该投资折算的新增年折旧，与次年 ARR 增量直接耦合；不额外乘利用率，不用在役存量抵扣。更新覆盖此前全部设备。2027 年及以前总 capex 给定，扣除全部更新、非原生净新增和所需推理净新增后倒算提前建设；不足时显示缺口及实际验算比例，不强行显示 30%。2028 起提前建设 = 后年 ARR 正增量所需投资 × 设定比例，单独列账、不参与当期增量验算，也不抵扣后续的规则所需投资；这是按增量预算推演，不是存量产能利用模型。净新增为负表示收入收缩，减少更新采购；超过可减少的更新时显示缺口。</p>
+    <p class="note">历史给定 CapEx 保留，用于计算后续各批次更新；逆算所需 CapEx 单列。历史给定金额超过所需的部分为差额（可视作提前建设），不足则显示缺口。2028 年起严格按逆算所需金额采购，不额外增加提前建设。未来采购会进入后续更新账。5:5 情景下非原生净新增等于推理正净新增；推理负增长时非原生净新增为零。所需总 CapEx 小于零时无法以非负采购实现该收缩速度，显示未满足的 ARR 增量差额。各批次寿命、更新口径、研发情景及比例与第三页设为相同时，正反运算可回代核验。</p>
   </div>
 </div><!-- /page2 -->
 
@@ -455,7 +454,7 @@ render();
 const P2={
   years:[], arr:{2021:0,2022:0,2023:0,2024:0,2025:100,2026:1000,2027:2000,2028:5600,2029:9200,2030:12800,2031:16400,2032:20000,2033:20000,2034:20000,2035:20000},
   cap:{2021:0,2022:0,2023:500,2024:2000,2025:4000,2026:7000,2027:12000},
-  rdHist:{2023:450,2024:1500,2025:2500,2026:4500,2027:5500}, rdFut:5500, rdG:0, arrMode:'linear', arrG:.5, util:.9, reuse:.7, ratio:.30, lifeOld:4, lifeNew:8, spread:true, repMode:'dep', lead:0.2, lastHist:2027, first:2021, last:2032
+  rdHist:{2023:450,2024:1500,2025:2500,2026:4500,2027:5500}, rdFut:5500, rdG:0, rdMode:'flat', arrMode:'linear', arrG:.5, util:.9, reuse:.7, ratio:.30, lifeOld:4, lifeNew:8, spread:true, repMode:'dep', lead:0.2, lastHist:2027, first:2021, last:2032
 };
 for(let y=P2.first;y<=P2.last;y++) P2.years.push(y);
 
@@ -476,15 +475,17 @@ function compute2(){
     const delta=(P2.arr[t+1]||0)-(P2.arr[t]||0);
     const required=delta*P2.ratio/depRate;
     const capGiven=P2.cap[t]||0;
-    const rdTotal=hist?Math.min(capGiven,rdAt(t)):Math.max(0,maintRD+rdAt(t));
-    const rd=hist?rdTotal-maintRD:rdAt(t);
+    const futureRD=P2.rdMode==='split'?Math.max(0,required):P2.rdFut*Math.pow(P2.rdMode==='grow'?1.1:1,t-2027);
+    const rdTotal=hist?Math.min(capGiven,rdAt(t)):Math.max(0,maintRD+futureRD);
+    const rd=hist?rdTotal-maintRD:futureRD;
     const available=capGiven-maint-rd;
-    const grow=hist?Math.min(required,available):Math.max(required,-maint);
-    const ahead=hist?Math.max(0,available-grow):P2.lead*Math.max(0,(P2.arr[t+2]||0)-(P2.arr[t+1]||0))*P2.ratio/depRate;
+    const grow=hist?Math.min(required,available):Math.max(required,-maint-rd);
+    const ahead=hist?Math.max(0,available-grow):0;
+    const requiredCap=maint+rd+required;
     const cap=hist?capGiven:maint+grow+rd+ahead;
     const newDep=grow*depRate;
     const shortfall=Math.max(0,(required-grow)*depRate/P2.ratio);
-    co[t]={t,hist,cap,rd,rdTotal:Math.min(cap,Math.max(0,rdTotal)),rep:maint,grow,required,delta,depRate,newDep,checkedRatio:delta!==0?newDep/delta:null,aheadPlanned:ahead,usedLater:0,unused:ahead,atArrival:maint+grow,shortfall};
+    co[t]={t,hist,cap,requiredCap,rd,rdTotal:Math.min(cap,Math.max(0,rdTotal)),rep:maint,grow,required,delta,depRate,newDep,checkedRatio:delta!==0?newDep/delta:null,aheadPlanned:ahead,usedLater:0,unused:ahead,atArrival:maint+grow,shortfall};
   }
   for(let y=P2.first;y<=P2.last;y++){
     let dep=0;Object.values(co).forEach(c=>partsSpec(lifeOf(c.t)).forEach(([w,l])=>{if(y>=c.t+1&&y<=c.t+l)dep+=c.cap*w/l;}));
@@ -543,12 +544,12 @@ function kpis2(cs,rows){
   document.getElementById('kpis2').innerHTML=items.map(([t,n,d])=>`<div class="kpi"><div class="t">${t}</div><div class="n mono">${n}</div><div class="t">${d}</div></div>`).join('');
 }
 function table2(cs,rows){
-  let h='<tr><th>CapEx 年份</th><th>ARR 对应年份</th><th>次年 ARR 增量</th><th>总 capex</th><th>全部更新</th><th>非原生净新增</th><th>所需推理净新增</th><th>实际推理净新增</th><th>新增年折旧</th><th>新增折旧 / ARR 增量</th><th>提前建设</th><th>提前建设口径</th><th>ARR 增量缺口</th></tr>';
-  cs.filter(c=>c.t>=2023).forEach(c=>{h+=`<tr class="${c.hist?'p1':'p2'}"><td>${c.t}</td><td>${c.t+1}</td>${[c.delta,c.cap,c.rep,c.rd,c.required,c.grow,c.newDep].map(v=>`<td class="mono ${v<0?'neg':''}">${v.toLocaleString('zh-CN',{maximumFractionDigits:2})}</td>`).join('')}<td>${c.checkedRatio==null?'—':(100*c.checkedRatio).toFixed(2)+'%'}</td><td>${fmt(c.aheadPlanned)}</td><td>${c.hist?'倒算':'设定 '+Math.round(P2.lead*100)+'%'}</td><td class="${c.shortfall>1e-8?'neg':''}">${c.shortfall>1e-8?fmt(c.shortfall):'—'}</td></tr>`;});
+  let h='<tr><th>CapEx 年份</th><th>ARR 对应年份</th><th>次年 ARR 增量</th><th>给定 / 预测 CapEx</th><th>逆算所需 CapEx</th><th>全部更新</th><th>非原生净新增</th><th>所需推理净新增</th><th>实际推理净新增</th><th>新增年折旧</th><th>新增折旧 / ARR 增量</th><th>提前建设</th><th>提前建设口径</th><th>ARR 增量缺口</th></tr>';
+  cs.filter(c=>c.t>=2023).forEach(c=>{h+=`<tr class="${c.hist?'p1':'p2'}"><td>${c.t}</td><td>${c.t+1}</td>${[c.delta,c.cap,c.requiredCap,c.rep,c.rd,c.required,c.grow,c.newDep].map(v=>`<td class="mono ${v<0?'neg':''}">${v.toLocaleString('zh-CN',{maximumFractionDigits:2})}</td>`).join('')}<td>${c.checkedRatio==null?'—':(100*c.checkedRatio).toFixed(2)+'%'}</td><td>${fmt(c.aheadPlanned)}</td><td>${c.hist?'给定减所需':'严格逆算，无额外提前量'}</td><td class="${c.shortfall>1e-8?'neg':''}">${c.shortfall>1e-8?fmt(c.shortfall):'—'}</td></tr>`;});
   document.getElementById('tbl2').innerHTML=h;
 }
 function formula2(){
- document.getElementById('formula2').innerHTML=`ARR 情景以 <b>2026 实际值 ${fmt(P2.arr[2026])}</b> 为基数。<br><b>推理净新增投资(t) × 该批年折旧率 ÷ [ARR(t+1) − ARR(t)] = ${(P2.ratio*100).toFixed(0)}%</b><br>2027 capex 给定：提前建设 = 总 capex − 全部更新 − 非原生净新增 − 所需推理净新增。<br>2028 起总 capex = 全部更新 + 非原生净新增 + 推理净新增 + 设定的提前建设。<br>提前建设 = 后年 ARR 正增量 × ${(P2.ratio*100).toFixed(0)}% ÷ 该批年折旧率 × ${(P2.lead*100).toFixed(0)}%；提前建设不计入当期 30% 验算。<br><span style="color:var(--ink2)">整批：年折旧率 = 1 / 寿命；分批：按各批寿命加权。更新按${P2.repMode==='dep'?'全部在役设备折旧':'到期批次'}计算。表中按实际投资验算，预算不足会显示缺口；ARR 增量为零时比例无定义。</span>`;
+ document.getElementById('formula2').innerHTML=`<b>第二页 = 第三页逆运算</b>；ARR 以 2026 实际值 ${fmt(P2.arr[2026])} 为基数。<br>推理净新增(t) = [ARR(t+1) − ARR(t)] × ${(P2.ratio*100).toFixed(0)}% ÷ 该批年折旧率<br><b>所需 CapEx(t) = 全部更新(t) + 非原生净新增(t) + 推理净新增(t)</b><br>非原生情景：${P2.rdMode==='split'?'推理正净新增的同等金额（5:5）；推理收缩时非原生新增为零':P2.rdMode==='grow'?'以 '+fmt(P2.rdFut)+' 为基数，2028 起每年增长 10%':'2028 起每年 '+fmt(P2.rdFut)}。<br><span style="color:var(--ink2)">与第三页使用相同的批次折旧与更新规则，不另加提前建设。2027 及以前保留给定 CapEx，并显示所需金额及差额；这部分给定投入不保证恰好匹配 ARR 情景。2028 起按逆算结果采购，采购进入后续更新账。参数相同时，将第三页推算的 ARR 输入本页，可还原其 CapEx。</span>`;
 }
 const RD_PRESETS=[
   {n:'爬到 5500 后维持',v:{2023:450,2024:1500,2025:2500,2026:4500,2027:5500},f:5500},
@@ -593,12 +594,12 @@ function inputs2(){
     document.querySelectorAll('#page2 .grid2 input').forEach(inp=>inp.addEventListener('change',e=>{ const v=parseFloat(e.target.value.replace(/,/g,'')); if(isNaN(v)) return; P2[e.target.dataset.k][+e.target.dataset.y]=v; if(e.target.dataset.k==='arr'){ if(+e.target.dataset.y<=2026 && P2.arrMode!=='manual'){ applyArrPreset(); } else { P2.arrMode='manual'; markArr(); } if(+e.target.dataset.y===2032){P2.arr[2033]=P2.arr[2034]=P2.arr[2035]=v;} } setTimeout(render2,0); }));
   }
 }
-function render2(){ inputs2(); if(P2.arrMode!=='manual') applyArrPreset(); const {rows,cohorts}=compute2(); formula2(); chartD1(rows); chartD2(cohorts); kpis2(cohorts,rows); table2(cohorts,rows); }
+function render2(){ document.querySelectorAll('#rdModes2 .chip').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.v===P2.rdMode));b.onclick=()=>{P2.rdMode=b.dataset.v;render2();};}); inputs2(); if(P2.arrMode!=='manual') applyArrPreset(); const {rows,cohorts}=compute2(); formula2(); chartD1(rows); chartD2(cohorts); kpis2(cohorts,rows); table2(cohorts,rows); }
 const bind2=(id,fn,lbl)=>{ const e=document.getElementById(id); e.addEventListener('input',()=>{ fn(+e.value); document.getElementById(id+'V').textContent=lbl(+e.value); render2(); }); };
 bind2('rdFut',v=>P2.rdFut=v,v=>String(v));
 bind2('ratio2',v=>P2.ratio=v/100,v=>v+'%');
-document.querySelectorAll('#rdGChips .chip').forEach(b=>{ b.setAttribute('aria-pressed',String(+b.dataset.v===P2.rdG)); b.onclick=()=>{ P2.rdG=+b.dataset.v; document.querySelectorAll('#rdGChips .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); render2(); }; });
-document.querySelectorAll('#leadChips .chip').forEach(b=>{ b.setAttribute('aria-pressed',String(+b.dataset.v===P2.lead)); b.onclick=()=>{ P2.lead=+b.dataset.v; document.querySelectorAll('#leadChips .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); render2(); }; });
+
+
 document.querySelectorAll('#repChips .chip').forEach(b=>{ b.setAttribute('aria-pressed',String(b.dataset.v===P2.repMode)); b.onclick=()=>{ P2.repMode=b.dataset.v; document.querySelectorAll('#repChips .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); render2(); }; });
 document.querySelectorAll('#spreadChips .chip').forEach(b=>{ b.setAttribute('aria-pressed',String((b.dataset.v==='1')===P2.spread)); b.onclick=()=>{ P2.spread=b.dataset.v==='1'; document.querySelectorAll('#spreadChips .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); render2(); }; }); [['lifeOld',[4,5,6,7,8]],['lifeNew',[4,5,6,7,8]]].forEach(([key,opts])=>{ const el=document.querySelector(`#page2 [data-life="${key}"]`); el.innerHTML=opts.map(v=>`<button class="chip" data-v="${v}" aria-pressed="${P2[key]===v}">${v} 年</button>`).join(''); el.querySelectorAll('button').forEach(b=>b.onclick=()=>{ P2[key]=+b.dataset.v; el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); render2(); }); });
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x===b)); ['page1','page2','page3','page4'].forEach(id=>document.getElementById(id).hidden=b.dataset.page!==id); if(b.dataset.page==='page3') render3(); if(b.dataset.page==='page4') render4(); try{localStorage.setItem('arrcapex.page',b.dataset.page)}catch(e){} });
