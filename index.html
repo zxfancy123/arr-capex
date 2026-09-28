@@ -195,25 +195,25 @@ tr.p2 td:first-child{border-left:3px solid var(--cap)}
         <div class="row"><span>基数</span><input type="range" id="xRdFut" min="0" max="10000" step="250" value="5500"><span class="v mono" id="xRdFutV">5500</span></div>
         <div class="lab">历史（A、B 共用，可改）</div>
         <table class="rdtbl" id="xHist"></table>
-        <p class="hint">非原生金额 = 当年 capex 里训练 / 研发 / 大厂基础盘、不形成原生 ARR 的部分（含其自身更新）。2027 起的 capex 不在这里：A 里是你给的路径，B 里由 ARR 反算。</p>
+        <p class="hint">非原生金额 = 当年 capex 里训练 / 研发 / 大厂基础盘、不形成原生 ARR 的部分（含其自身更新）。2026、2027 的 capex 是锁定值，A、B 共用；2028 起 A 里是你给的路径，B 里由 ARR 反算。</p>
       </div>
     </div>
   </div>
 
   <div class="xinputs">
     <div class="panel xA">
-      <div class="lab"><span class="tagA">A</span> 正算输入 · capex 走势 2027–2032</div>
+      <div class="lab"><span class="tagA">A</span> 正算输入 · capex 走势（2026、2027 锁定，2028–2032 由你设定）</div>
       <div class="chips" id="xCapPresets"></div>
       <div class="row"><span>2028 起统一增速</span><input type="range" id="xCapG" min="-20" max="50" step="1" value="10"><span class="v mono" id="xCapGV">+10%</span></div>
       <table class="rdtbl xin" id="xCapTbl"></table>
-      <p class="hint">2027 = 指引 12000 是默认值，也可改。拖滑杆 = 2028 起每年按同一增速复利。</p>
+      <p class="hint">2026 = 7000、2027 = 12000 锁定（数字可在上面共用历史表里改）。拖滑杆 = 2028 起每年按同一增速复利。</p>
     </div>
     <div class="panel xB">
-      <div class="lab"><span class="tagB">B</span> 反算输入 · ARR 走势 2027–2032</div>
+      <div class="lab"><span class="tagB">B</span> 反算输入 · ARR 走势（2027 由锁定 capex 推出，2028–2032 由你设定）</div>
       <div class="chips" id="xArrPresets"></div>
       <div class="row"><span>统一年增速</span><input type="range" id="xArrG" min="0" max="150" step="5" value="50"><span class="v mono" id="xArrGV">+50%</span></div>
       <table class="rdtbl xin" id="xArrTbl"></table>
-      <p class="hint">从 2026 实际 ARR 出发，某年的 ARR 增量对应同一年的 capex。改金额或增速会切到"手动"。</p>
+      <p class="hint">2027 年 capex 锁定为 1.2 万亿，所以 2027 年 ARR 是算出来的，A、B 相同；从这个数出发设定 2028–2032。改金额或增速会切到"手动"。</p>
     </div>
   </div>
   <div class="panel" style="margin-top:12px">
@@ -476,7 +476,7 @@ render();
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x===b)); ['page1','page23','page4'].forEach(id=>document.getElementById(id).hidden=b.dataset.page!==id); if(b.dataset.page==='page23') render23(); if(b.dataset.page==='page4') render4(); try{localStorage.setItem('arrcapex.page',b.dataset.page)}catch(e){} });
 // ---------- page 2+3 merged: A capex→ARR, B ARR→capex ----------
 const S={
-  capHist:{2023:500,2024:2000,2025:4000,2026:7000}, capRef:{2027:12000},
+  capHist:{2023:500,2024:2000,2025:4000,2026:7000,2027:12000},
   rdHist:{2023:450,2024:1500,2025:2500,2026:4500,2027:5500},
   arrHist:{2024:0,2025:100,2026:1000},
   rdFut:5500, rdMode:'flat', ratio:.30, lifeOld:4, lifeNew:8, spread:true, repMode:'dep',
@@ -497,7 +497,7 @@ function xSeed(){ const C={},RD={}; for(let t=2023;t<=2026;t++){ C[t]=S.capHist[
 function computeA(capIn){ capIn=capIn||S.capA;
   const {C,RD}=xSeed(); const out={}; let prev=S.arrHist[2026];
   CY.forEach(cy=>{
-    C[cy]=capIn[cy]; const [m,mr]=xRenew(C,RD,cy); const avail=C[cy]-m; let rd;
+    C[cy]=cy===2027?S.capHist[2027]:capIn[cy]; const [m,mr]=xRenew(C,RD,cy); const avail=C[cy]-m; let rd;
     if(cy<=2027){ RD[cy]=Math.min(C[cy],S.rdHist[cy]||0); rd=RD[cy]-mr; }
     else { rd=S.rdMode==='split'?Math.max(0,avail)/2:xRdFuture(cy); RD[cy]=Math.min(C[cy],Math.max(0,mr+rd)); }
     const net=avail-rd, dr=xRate(cy), newDep=net*dr, dARR=newDep/S.ratio;
@@ -508,7 +508,7 @@ function computeA(capIn){ capIn=capIn||S.capA;
   return out;
 }
 function computeB(arrIn){
-  const {C,RD}=xSeed(); const out={}; const A=arrIn||S.arrB;
+  const {C,RD}=xSeed(); const out={}; const A={...(arrIn||S.arrB),2027:arr27()};
   CY.forEach(cy=>{
     const a0=cy===2027?S.arrHist[2026]:A[cy-1], a1=A[cy], dARR=a1-a0;
     const dr=xRate(cy), newDep=dARR*S.ratio; let net=newDep/dr;
@@ -524,17 +524,19 @@ function computeB(arrIn){
 }
 // ---- inputs ----
 const X_CAP_PRESETS=[{id:'m500',n:'原默认：每年 −500'},{id:'g',n:'统一增速（滑杆）'},{id:-.05,n:'−5%/年'},{id:0,n:'持平'},{id:.10,n:'+10%/年'},{id:.25,n:'+25%/年'}];
+function arr27(){ return computeA()[2027].arr; }
 function applyCapA(){ const m=S.capAMode; if(m==='manual') return; let v=S.capA[2027];
   for(let y=2028;y<=2032;y++){ if(m==='m500') v-=500; else v*=1+(m==='g'?S.capAG:m); S.capA[y]=Math.max(0,v); } }
 const X_ARR_PRESETS=[
   {id:'linear',n:'线性：2032 年到 2 万亿'},{id:'cagr',n:'统一增速（滑杆）'},
-  {id:'front',n:'前高后低 +100/60/40/25/15/10%',g:[1,.6,.4,.25,.15,.1,.1]},
-  {id:'double',n:'翻倍三年后放缓 +100/100/100/30/10/10%',g:[1,1,1,.3,.1,.1,.1]},
-  {id:'slow',n:'温和 +40%/年',g:Array(7).fill(.4)},
+  {id:'front',n:'前高后低 +60/40/25/15/10%',g:[.6,.4,.25,.15,.1]},
+  {id:'double',n:'翻倍两年后放缓 +100/100/30/10/10%',g:[1,1,.3,.1,.1]},
+  {id:'slow',n:'温和 +40%/年',g:Array(5).fill(.4)},
 ];
-function applyArrB(){ const m=S.arrBMode; if(m==='manual') return; const b=S.arrHist[2026];
-  if(m==='linear'){ const inc=(20000-b)/6; AY.forEach((y,i)=>S.arrB[y]=b+inc*(i+1)); return; }
-  const gs=m==='cagr'?Array(7).fill(S.arrBG):X_ARR_PRESETS.find(p=>p.id===m).g; let v=b; AY.forEach((y,i)=>{v*=1+gs[i];S.arrB[y]=v;}); }
+const FY=[2028,2029,2030,2031,2032];
+function applyArrB(){ const m=S.arrBMode; if(m==='manual') return; const b=arr27(); if(b==null) return;
+  if(m==='linear'){ const inc=(20000-b)/5; FY.forEach((y,i)=>S.arrB[y]=b+inc*(i+1)); return; }
+  const gs=m==='cagr'?Array(5).fill(S.arrBG):X_ARR_PRESETS.find(p=>p.id===m).g; let v=b; FY.forEach((y,i)=>{v*=1+gs[i];S.arrB[y]=v;}); }
 const num=v=>{const n=parseFloat(String(v).replace(/,/g,''));return Number.isFinite(n)?n:null;};
 function xInputs(){
   const pc=document.getElementById('xCapPresets');
@@ -547,27 +549,29 @@ function xInputs(){
   document.getElementById('xArrG').closest('.row').style.opacity=S.arrBMode==='cagr'?1:.5;
   // A capex table
   let h='<tr><td>年份</td><td>总 capex</td><td>同比 %</td></tr>';
-  CY.forEach(y=>{ const p=y===2027?S.capHist[2026]:S.capA[y-1], c=S.capA[y];
+  h+=`<tr><td class="mono">2026</td><td class="mono" style="text-align:right;padding-right:10px">${fmt(S.capHist[2026])}</td><td class="mono">锁定</td></tr><tr><td class="mono">2027E</td><td class="mono" style="text-align:right;padding-right:10px">${fmt(S.capHist[2027])}</td><td class="mono">锁定</td></tr>`;
+  FY.forEach(y=>{ const p=y===2028?S.capHist[2027]:S.capA[y-1], c=S.capA[y];
     h+=`<tr><td class="mono">${y}${y>=2027?'E':''}</td><td><input class="mono" data-y="${y}" data-k="cap" value="${Math.round(c)}" inputmode="decimal"></td><td><input class="mono" data-y="${y}" data-k="g" value="${p>0?(c/p*100-100).toFixed(1):''}" inputmode="decimal"></td></tr>`; });
   const ct=document.getElementById('xCapTbl'); ct.innerHTML=h;
   ct.querySelectorAll('input').forEach(inp=>inp.addEventListener('change',e=>{ const v=num(e.target.value), y=+e.target.dataset.y; if(v==null){render23();return;}
-    if(e.target.dataset.k==='cap') S.capA[y]=Math.max(0,v); else { const p=y===2027?S.capHist[2026]:S.capA[y-1]; S.capA[y]=Math.max(0,p*(1+v/100)); }
+    if(e.target.dataset.k==='cap') S.capA[y]=Math.max(0,v); else { const p=y===2028?S.capHist[2027]:S.capA[y-1]; S.capA[y]=Math.max(0,p*(1+v/100)); }
     if(y>=2028) S.capAMode='manual'; else applyCapA(); render23(); }));
   // B ARR table
   h='<tr><td>年份</td><td>ARR</td><td>同比 %</td></tr>';
   h+=`<tr><td class="mono">2026</td><td class="mono" style="text-align:right;padding-right:10px">${fmt(S.arrHist[2026])}</td><td class="mono">实际</td></tr>`;
-  AY.forEach(y=>{ const p=y===2027?S.arrHist[2026]:S.arrB[y-1], c=S.arrB[y];
+  const a27=arr27(); h+=`<tr><td class="mono">2027E</td><td class="mono" style="text-align:right;padding-right:10px">${a27==null?'不可行':fmt(a27)}</td><td class="mono">由锁定 capex 推出</td></tr>`;
+  FY.forEach(y=>{ const p=y===2028?a27:S.arrB[y-1], c=S.arrB[y];
     h+=`<tr><td class="mono">${y}E</td><td><input class="mono" data-y="${y}" data-k="arr" value="${Math.round(c)}" inputmode="decimal"></td><td><input class="mono" data-y="${y}" data-k="g" value="${p>0?(c/p*100-100).toFixed(1):''}" inputmode="decimal"></td></tr>`; });
   const at=document.getElementById('xArrTbl'); at.innerHTML=h;
   at.querySelectorAll('input').forEach(inp=>inp.addEventListener('change',e=>{ const v=num(e.target.value), y=+e.target.dataset.y; if(v==null){render23();return;}
-    if(e.target.dataset.k==='arr') S.arrB[y]=v; else { const p=y===2027?S.arrHist[2026]:S.arrB[y-1]; S.arrB[y]=p*(1+v/100); }
+    if(e.target.dataset.k==='arr') S.arrB[y]=v; else { const p=y===2028?arr27():S.arrB[y-1]; S.arrB[y]=p*(1+v/100); }
     S.arrBMode='manual'; render23(); }));
   // shared history
   h='<tr><td>年份</td><td>capex</td><td>非原生</td></tr>';
-  [2023,2024,2025,2026,2027].forEach(y=>{ h+=`<tr><td class="mono">${y}</td><td>${y<=2026?`<input class="mono" data-y="${y}" data-k="capHist" value="${S.capHist[y]}">`:'<span class="hint">见 A / B</span>'}</td><td><input class="mono" data-y="${y}" data-k="rdHist" value="${S.rdHist[y]}"></td></tr>`; });
+  [2023,2024,2025,2026,2027].forEach(y=>{ h+=`<tr><td class="mono">${y}</td><td><input class="mono" data-y="${y}" data-k="capHist" value="${S.capHist[y]}"></td><td><input class="mono" data-y="${y}" data-k="rdHist" value="${S.rdHist[y]}"></td></tr>`; });
   h+=`<tr><td class="mono">2026</td><td colspan="2" style="text-align:left">实际 ARR 基数 <input class="mono" data-y="2026" data-k="arrHist" value="${S.arrHist[2026]}"></td></tr>`;
   const ht=document.getElementById('xHist'); ht.innerHTML=h;
-  ht.querySelectorAll('input').forEach(inp=>inp.addEventListener('change',e=>{ const v=num(e.target.value); if(v==null){render23();return;} S[e.target.dataset.k][+e.target.dataset.y]=Math.max(0,v); if(e.target.dataset.k==='arrHist') applyArrB(); render23(); }));
+  ht.querySelectorAll('input').forEach(inp=>inp.addEventListener('change',e=>{ const v=num(e.target.value); if(v==null){render23();return;} S[e.target.dataset.k][+e.target.dataset.y]=Math.max(0,v); applyCapA(); applyArrB(); render23(); }));
   // chips
   [['xLifeOld','lifeOld'],['xLifeNew','lifeNew']].forEach(([id,k])=>{ const el=document.getElementById(id);
     el.innerHTML=[3,4,5,6,7,8].map(v=>`<button class="chip" data-v="${v}" aria-pressed="${S[k]===v}">${v} 年</button>`).join('');
@@ -679,7 +683,7 @@ function stepsX(A,B){
       <li>÷ 年折旧率 ${fr(b.dr)} = 需要的推理净增 <b>${f0(b.netReq)}</b></li>
       <li>+ ${rdTxtB}</li>
       <li>+ 全部更新 ${f0(b.rep)}（推理 ${f0(b.repInf)} + 非原生 ${f0(b.repRD)}）</li>
-      <li>= ${cy} 年所需 capex <b>${b.infeasible?'为负（按 0 计）':f0(b.cap)}</b>${cy===2027?`；指引 ${f0(S.capRef[2027])}`:''}</li></ol></div>
+      <li>= ${cy} 年所需 capex <b>${b.infeasible?'为负（按 0 计）':f0(b.cap)}</b>${cy===2027?'（2027 锁定，反算回来正好等于 12,000）':''}</li></ol></div>
     <div class="xc xd"><div>capex ${dtxt(b.cap-a.cap)}</div><div>推理净增 ${dtxt(b.net-a.net)}</div><div>新增折旧 ${dtxt(b.newDep-a.newDep)}</div><div>更新 ${dtxt(b.rep-a.rep)}</div><div>${cy} ARR ${a.arr==null?'—':dtxt(b.arr-a.arr)}</div></div>`;
   });
   document.getElementById('xSteps').innerHTML=h+'</div>';
@@ -733,7 +737,7 @@ function kpisX(A,B){
     ['2027–2032 capex 合计',`A ${f0(sum(A,'cap'))}`,`B ${f0(sum(B,'cap'))} · 差 ${f0(sum(B,'cap')-sum(A,'cap'))}`],
     ['2032E ARR',`A ${a32==null?'不可行':f0(a32)}`,`B ${f0(b32)}`],
     ['推理净增合计',`A ${f0(sum(A,'net'))}`,`B ${f0(sum(B,'net'))}`],
-    ['2027E 所需 capex',`B ${f0(B[2027].cap)}`,`A 用的指引 ${f0(A[2027].cap)}`],
+    ['2027E ARR（锁定 1.2 万亿推出）',`${A[2027].arr==null?'不可行':f0(A[2027].arr)}`,`A、B 相同；B 从 2028 起按你的设定`],
   ];
   document.getElementById('xKpis').innerHTML=items.map(([t,n,d])=>`<div class="kpi"><div class="t">${t}</div><div class="n mono" style="font-size:17px">${n}</div><div class="t">${d}</div></div>`).join('');
   const dArr=Math.max(...CY.map(c=>A[c].arr==null?Infinity:Math.abs(B[c].arr-A[c].arr))), dCap=Math.max(...CY.map(c=>Math.abs(B[c].cap-A[c].cap)));
@@ -741,11 +745,11 @@ function kpisX(A,B){
 }
 function formulaX(){
   const r=Math.round(S.ratio*100);
-  document.getElementById('xFormula').innerHTML=`<b>口径：当年 capex 的理论年折旧（即使当年还没开始计提）对应当年的 ARR 增量</b><br><span style="color:var(--sa)">A</span>：推理净增(t) = capex(t) − 全部更新(t) − 非原生净新增(t)；新增理论折旧(t) = 推理净增(t) × 年折旧率；<b>ARR(t) = ARR(t−1) + 新增理论折旧(t) ÷ ${r}%</b><br><span style="color:var(--sb)">B</span>：新增理论折旧(t) = [ARR(t) − ARR(t−1)] × ${r}%；推理净增(t) = 新增理论折旧(t) ÷ 年折旧率；<b>capex(t) = 全部更新(t) + 非原生净新增(t) + 推理净增(t)</b><br><span style="color:var(--ink2)">年折旧率：2027 年买的 ${fr(xRate(2027))}（${S.lifeOld} 年），2028 起 ${fr(xRate(2028))}（${S.lifeNew} 年）${S.spread?'，分批退役按寿命 −1 / 0 / +1 年各 1/3 加权':''}。更新 = 此前各批设备在当年的${S.repMode==='dep'?'折旧额':'到期原值'}，A、B 各用自己的 capex 滚动。2026 年 capex 7000 和 ARR 1000 是共用的实际值。</span>`;
+  document.getElementById('xFormula').innerHTML=`<b>口径：当年 capex 的理论年折旧（即使当年还没开始计提）对应当年的 ARR 增量</b><br><span style="color:var(--sa)">A</span>：推理净增(t) = capex(t) − 全部更新(t) − 非原生净新增(t)；新增理论折旧(t) = 推理净增(t) × 年折旧率；<b>ARR(t) = ARR(t−1) + 新增理论折旧(t) ÷ ${r}%</b><br><span style="color:var(--sb)">B</span>：新增理论折旧(t) = [ARR(t) − ARR(t−1)] × ${r}%；推理净增(t) = 新增理论折旧(t) ÷ 年折旧率；<b>capex(t) = 全部更新(t) + 非原生净新增(t) + 推理净增(t)</b><br><span style="color:var(--ink2)">年折旧率：2027 年买的 ${fr(xRate(2027))}（${S.lifeOld} 年），2028 起 ${fr(xRate(2028))}（${S.lifeNew} 年）${S.spread?'，分批退役按寿命 −1 / 0 / +1 年各 1/3 加权':''}。更新 = 此前各批设备在当年的${S.repMode==='dep'?'折旧额':'到期原值'}，A、B 各用自己的 capex 滚动。2026 年 capex 7000、2027 年 capex 12000 锁定，2026 年 ARR 1000 为实际值；2027 年 ARR 由锁定的 12000 正算得出，A、B 相同，2028 起两边才分开。</span>`;
 }
 function render23(){ xInputs(); const A=computeA(), B=computeB(), rt=roundTrip(A,B); formulaX(); chartX0(A,B,rt); chartX1(A,B); chartX2(A,B); tablesX(A,B); stepsX(A,B); kpisX(A,B); }
-document.getElementById('xA2B').onclick=()=>{ const A=computeA(); if(CY.some(c=>A[c].arr==null)) return; CY.forEach(c=>S.arrB[c]=A[c].arr); S.arrBMode='manual'; render23(); };
-document.getElementById('xB2A').onclick=()=>{ const B=computeB(); CY.forEach(c=>S.capA[c]=B[c].cap); S.capAMode='manual'; render23(); };
+document.getElementById('xA2B').onclick=()=>{ const A=computeA(); if(CY.some(c=>A[c].arr==null)) return; FY.forEach(c=>S.arrB[c]=A[c].arr); S.arrBMode='manual'; render23(); };
+document.getElementById('xB2A').onclick=()=>{ const B=computeB(); FY.forEach(c=>S.capA[c]=B[c].cap); S.capAMode='manual'; render23(); };
 applyArrB();
 
 // ---------- page 4 ----------
