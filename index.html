@@ -172,7 +172,7 @@ tr.p2 td:first-child{border-left:3px solid var(--cap)}
 </div><!-- /page1 -->
 
 <div id="page23" hidden>
-  <p class="sub">同一套规则，两个方向对着算。<b style="color:var(--sa)">A 正算</b>：你给 capex 走势 → 扣掉设备更新和非原生投入 → 推理净增投入 × 年折旧率 = 新增折旧 → ÷ 30% = <b>当年</b> ARR 增量。<b style="color:var(--sb)">B 反算</b>：你给 ARR 走势 → 当年 ARR 增量 × 30% = 需要的新增折旧 → ÷ 年折旧率 = 需要的推理净增投入 → 加回非原生和设备更新 = 需要的总 capex。口径：某年买的设备，当年就按政策年限算出理论年折旧（哪怕还没开始计提），这笔折旧对应的是<b>同一年</b>的 ARR 增量，不往后错年。两边共用下面同一组假设，行都按年份排，往下拉逐年对照。单位：亿美元。</p>
+  <p class="sub">同一套规则，两个方向对着算。<b style="color:var(--sa)">A 正算</b>：你给 capex 走势 → 扣掉非原生 capex 和推理设备更新 → 推理净增投入 × 年折旧率 = 新增折旧 → ÷ 30% = <b>当年</b> ARR 增量。<b style="color:var(--sb)">B 反算</b>：你给 ARR 走势 → 当年 ARR 增量 × 30% = 需要的新增折旧 → ÷ 年折旧率 = 需要的推理净增投入 → 加回推理设备更新和非原生 capex = 需要的总 capex。口径：某年买的设备，当年就按政策年限算出理论年折旧（哪怕还没开始计提），这笔折旧对应的是<b>同一年</b>的 ARR 增量，不往后错年。两边共用下面同一组假设，行都按年份排，往下拉逐年对照。单位：亿美元。</p>
   <div class="formula mono" id="xFormula"></div>
 
   <div class="panel" style="margin-bottom:16px">
@@ -190,8 +190,8 @@ tr.p2 td:first-child{border-left:3px solid var(--cap)}
         <div class="chips" id="xRep"><button class="chip" data-v="dep">按折旧额（当年全部在役设备折旧）</button><button class="chip" data-v="cohort">按到期批次（当年退役设备原值）</button></div>
       </div>
       <div>
-        <div class="lab" style="margin-top:0">2028 起非原生 / 研发新增投入（不含更新）</div>
-        <div class="chips" id="xRdMode"><button class="chip" data-v="flat">维持不变</button><button class="chip" data-v="grow">每年 +10%</button><button class="chip" data-v="split">新增非原生 : 新增推理 = 5:5</button></div>
+        <div class="lab" style="margin-top:0">2028 起非原生 capex 总额（已含其自身更新）</div>
+        <div class="chips" id="xRdMode"><button class="chip" data-v="flat">维持不变</button><button class="chip" data-v="grow">每年 +10%</button><button class="chip" data-v="split">非原生 = 推理净增（5:5）</button></div>
         <div class="row"><span>基数</span><input type="range" id="xRdFut" min="0" max="10000" step="250" value="5500"><span class="v mono" id="xRdFutV">5500</span></div>
         <div class="lab">历史（A、B 共用，可改）</div>
         <table class="rdtbl" id="xHist"></table>
@@ -234,7 +234,7 @@ tr.p2 td:first-child{border-left:3px solid var(--cap)}
       <svg id="xE1" viewBox="0 0 860 300"></svg>
     </div>
     <div class="panel">
-      <p class="ctitle"><span>capex 构成：每年左 A、右 B</span><span class="legend"><span><i style="background:var(--keep)"></i>全部设备更新</span><span><i style="background:var(--rd)"></i>非原生净新增</span><span><i style="background:var(--sa)"></i>A 推理净增</span><span><i style="background:var(--sb)"></i>B 推理净增</span><span><i style="background:var(--neg-soft);border:1px dashed var(--neg)"></i>推理净增为负</span></span></p>
+      <p class="ctitle"><span>capex 构成：每年左 A、右 B</span><span class="legend"><span><i style="background:var(--keep)"></i>推理设备更新</span><span><i style="background:var(--rd)"></i>非原生 capex</span><span><i style="background:var(--sa)"></i>A 推理净增</span><span><i style="background:var(--sb)"></i>B 推理净增</span><span><i style="background:var(--neg-soft);border:1px dashed var(--neg)"></i>推理净增为负</span></span></p>
       <svg id="xE2" viewBox="0 0 860 320"></svg>
       <div class="kpis" id="xKpis"></div>
     </div>
@@ -249,13 +249,13 @@ tr.p2 td:first-child{border-left:3px solid var(--cap)}
   <div class="panel tablewrap">
     <h2 class="xh"><span class="tagA">A</span> 正算明细：capex → ARR</h2>
     <table id="xTA" class="xtbl"></table>
-    <p class="note">推理净增 = 总 capex − 全部更新 − 非原生净新增。新增年折旧 = 推理净增 × 年折旧率。当年 ARR 增量 = 当年新增理论折旧 ÷ 比例。最后一列回代验算：新增折旧 ÷ ARR 实际增量，应当正好等于比例。</p>
+    <p class="note">推理净增 = 总 capex − 非原生 capex（总额，含其自身更新）− 推理设备更新。新增年折旧 = 推理净增 × 年折旧率。当年 ARR 增量 = 当年新增理论折旧 ÷ 比例。最后一列回代验算：新增折旧 ÷ ARR 实际增量，应当正好等于比例。</p>
   </div>
 
   <div class="panel tablewrap">
     <h2 class="xh"><span class="tagB">B</span> 反算明细：ARR → capex</h2>
     <table id="xTB" class="xtbl"></table>
-    <p class="note">当年需要的新增理论折旧 = 当年 ARR 增量 × 比例。需要的推理净增 = 新增年折旧 ÷ 年折旧率。需要的总 capex = 全部更新 + 非原生净新增 + 推理净增。更新账用 B 自己反算出来的 capex 逐年滚动，不借用 A 的数。所需 capex 为负说明 ARR 收缩得比设备自然退役还快，标红。</p>
+    <p class="note">当年需要的新增理论折旧 = 当年 ARR 增量 × 比例。需要的推理净增 = 新增年折旧 ÷ 年折旧率。需要的总 capex = 推理净增 + 推理设备更新 + 非原生 capex。推理更新账用 B 自己反算出来的推理 capex 逐年滚动，不借用 A 的数。所需 capex 为负说明 ARR 收缩得比设备自然退役还快，标红。</p>
   </div>
 
   <div class="panel" style="margin-top:20px">
@@ -487,38 +487,39 @@ const CY=[2027,2028,2029,2030,2031,2032], AY=CY;
 const xLife=t=>t<=2027?S.lifeOld:S.lifeNew;
 const xParts=L=>S.spread?[[1/3,Math.max(1,L-1)],[1/3,L],[1/3,L+1]]:[[1,L]];
 const xRate=t=>xParts(xLife(t)).reduce((s,[w,l])=>s+w/l,0);
-function xRenew(C,RD,cy){ let m=0,mr=0;
-  for(let t=2023;t<cy;t++){ if(!C[t]) continue; xParts(xLife(t)).forEach(([w,l])=>{
-    const r=S.repMode==='dep'?(cy>=t+1&&cy<=t+l?w/l:0):(t+l===cy?w:0); m+=C[t]*r; mr+=(RD[t]||0)*r; }); }
-  return [m,mr]; }
+// Renewal only for INFERENCE equipment. Non-native capex is a yearly total that already includes its own renewal.
+function xRenew(I,cy){ let m=0;
+  for(let t=2023;t<cy;t++){ if(!I[t]) continue; xParts(xLife(t)).forEach(([w,l])=>{
+    const r=S.repMode==='dep'?(cy>=t+1&&cy<=t+l?w/l:0):(t+l===cy?w:0); m+=I[t]*r; }); }
+  return m; }
 function xRdFuture(cy){ return S.rdFut*Math.pow(S.rdMode==='grow'?1.1:1,cy-2027); }
-function xSeed(){ const C={},RD={}; for(let t=2023;t<=2026;t++){ C[t]=S.capHist[t]||0; RD[t]=Math.min(C[t],S.rdHist[t]||0); } return {C,RD}; }
+function xSeed(){ const I={}; for(let t=2023;t<=2026;t++){ const c=S.capHist[t]||0; I[t]=c-Math.min(c,S.rdHist[t]||0); } return I; }
 
 function computeA(capIn){ capIn=capIn||S.capA;
-  const {C,RD}=xSeed(); const out={}; let prev=S.arrHist[2026];
+  const I=xSeed(); const out={}; let prev=S.arrHist[2026];
   CY.forEach(cy=>{
-    C[cy]=cy===2027?S.capHist[2027]:capIn[cy]; const [m,mr]=xRenew(C,RD,cy); const avail=C[cy]-m; let rd;
-    if(cy<=2027){ RD[cy]=Math.min(C[cy],S.rdHist[cy]||0); rd=RD[cy]-mr; }
-    else { rd=S.rdMode==='split'?Math.max(0,avail)/2:xRdFuture(cy); RD[cy]=Math.min(C[cy],Math.max(0,mr+rd)); }
-    const net=avail-rd, dr=xRate(cy), newDep=net*dr, dARR=newDep/S.ratio;
+    const cap=cy===2027?S.capHist[2027]:capIn[cy]; const m=xRenew(I,cy); const avail=cap-m;
+    const nn=cy<=2027?Math.min(cap,S.rdHist[cy]||0):S.rdMode==='split'?Math.max(0,avail)/2:xRdFuture(cy);
+    I[cy]=cap-nn;
+    const net=avail-nn, dr=xRate(cy), newDep=net*dr, dARR=newDep/S.ratio;
     const raw=prev==null?null:prev+dARR, arr=raw==null||raw<0?null:raw;
-    out[cy]={cy,cap:C[cy],rep:m,repRD:mr,repInf:m-mr,avail,rd,net,dr,newDep,dARR,arrPrev:prev,arr,g:prev>0&&arr!=null?arr/prev-1:null,check:arr!=null&&Math.abs(dARR)>1e-9?newDep/dARR:null};
+    out[cy]={cy,cap,rep:m,rd:nn,inf:I[cy],avail,net,dr,newDep,dARR,arrPrev:prev,arr,g:prev>0&&arr!=null?arr/prev-1:null,check:arr!=null&&Math.abs(dARR)>1e-9?newDep/dARR:null};
     prev=arr;
   });
   return out;
 }
 function computeB(arrIn){
-  const {C,RD}=xSeed(); const out={}; const A={...(arrIn||S.arrB),2027:arr27()};
+  const I=xSeed(); const out={}; const A={...(arrIn||S.arrB),2027:arr27()};
   CY.forEach(cy=>{
     const a0=cy===2027?S.arrHist[2026]:A[cy-1], a1=A[cy], dARR=a1-a0;
     const dr=xRate(cy), newDep=dARR*S.ratio; let net=newDep/dr;
-    const [m,mr]=xRenew(C,RD,cy); let rd;
-    if(cy<=2027) rd=(S.rdHist[cy]||0)-mr; else rd=S.rdMode==='split'?Math.max(0,net):xRdFuture(cy);
-    let cap=m+rd+net, infeasible=false, netReq=net;
-    if(cap<0){ infeasible=true; net=-m-rd; cap=0; }
-    C[cy]=cap; RD[cy]=cy<=2027?Math.min(cap,S.rdHist[cy]||0):Math.min(cap,Math.max(0,mr+rd));
+    const m=xRenew(I,cy);
+    const nn=cy<=2027?(S.rdHist[cy]||0):S.rdMode==='split'?Math.max(0,net):xRdFuture(cy);
+    let cap=m+nn+net, infeasible=false, netReq=net;
+    if(cap<0){ infeasible=true; net=-m-nn; cap=0; }
+    I[cy]=cap-nn;
     const pc=cy===2027?S.capHist[2026]:out[cy-1].cap;
-    out[cy]={cy,arr0:a0,arr:a1,dARR,g:a0>0?a1/a0-1:null,newDep,dr,net,netReq,rd,rep:m,repRD:mr,repInf:m-mr,cap,capG:pc>0?cap/pc-1:null,infeasible};
+    out[cy]={cy,arr0:a0,arr:a1,dARR,g:a0>0?a1/a0-1:null,newDep,dr,net,netReq,rd:nn,rep:m,inf:I[cy],cap,capG:pc>0?cap/pc-1:null,infeasible};
   });
   return out;
 }
@@ -638,7 +639,7 @@ function chartX2(A,B){
       if(r.net<-0.5) s+=`<rect x="${bx}" y="${y(0)}" width="${XBW}" height="${y(r.net)-y(0)}" fill="var(--neg-soft)" stroke="var(--neg)" stroke-dasharray="3 3"/>`;
       const top=Math.max(r.cap,acc), ro=(k==='A'?B:A)[yr], oTop=Math.max(ro.cap,ro.rep+Math.max(0,ro.rd)+Math.max(0,ro.net)); const lift=(Math.abs(y(top)-y(oTop))<13&&(top>oTop||(Math.abs(top-oTop)<1e-6&&k==='B')))?13:0; s+=fcBox(bx,y(0),y(top))+vLab(bx,y(top)-6-lift,r.cap);
       s+=`<text x="${bx+XBW/2}" y="${H-24}" text-anchor="middle" font-size="10" fill="var(--ink2)">${k}</text>`;
-      tip+=`<br>${k}：总 ${f0(r.cap)} = 更新 ${f0(r.rep)} + 非原生 ${f0(r.rd)} + 推理 ${f0(r.net)}`; });
+      tip+=`<br>${k}：总 ${f0(r.cap)} = 推理更新 ${f0(r.rep)} + 非原生 ${f0(r.rd)} + 推理净增 ${f0(r.net)}`; });
     s+=`<text x="${xAt(yr)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${yLab(yr)}</text>`+hitCol(yr,mt,ih,tip); });
   const el=document.getElementById('xE2'); el.innerHTML=s; xTip(el);
 }
@@ -680,13 +681,13 @@ function tablesX(A,B){
   CY.forEach(y=>{ const a=A[y], b=B[y];
     h+=`<tr class="p2"><td class="mono">${y}E</td>${ncell(a.arr)}${ncell(b.arr)}${dcell(a.arr==null?null:b.arr-a.arr)}<td class="mono">${fp(a.g)}</td><td class="mono">${fp(b.g)}</td>${ncell(a.cap,1)}${ncell(b.cap,1)}${dcell(b.cap-a.cap)}${ncell(a.net)}${ncell(b.net)}${dcell(b.net-a.net)}${ncell(a.newDep)}${ncell(b.newDep)}${dcell(b.newDep-a.newDep)}</tr>`; });
   document.getElementById('xCmp').innerHTML=h;
-  h=`<tr><th>年份</th><th>总 capex</th><th>同比</th><th>全部更新</th><th>└ 推理更新</th><th>└ 非原生更新</th><th>非原生净新增</th><th>= 推理净增</th><th>× 年折旧率</th><th>= 当年新增理论折旧</th><th>÷ ${Math.round(S.ratio*100)}% = 当年 ARR 增量</th><th>+ 上年 ARR</th><th>= 当年 ARR</th><th>ARR 同比</th><th>验算 折旧/增量</th></tr>`;
+  h=`<tr><th>年份</th><th>总 capex</th><th>同比</th><th>− 非原生 capex（总额，含其自身更新）</th><th>= 推理 capex</th><th>− 推理设备更新</th><th>= 推理净增</th><th>× 年折旧率</th><th>= 当年新增理论折旧</th><th>÷ ${Math.round(S.ratio*100)}% = 当年 ARR 增量</th><th>+ 上年 ARR</th><th>= 当年 ARR</th><th>ARR 同比</th><th>验算 折旧/增量</th></tr>`;
   CY.forEach(cy=>{ const r=A[cy], pc=cy===2027?S.capHist[2026]:A[cy-1].cap;
-    h+=`<tr class="p2"><td class="mono">${cy}E</td>${ncell(r.cap,1)}<td class="mono">${fp(pc>0?r.cap/pc-1:null)}</td>${ncell(r.rep)}${ncell(r.repInf)}${ncell(r.repRD)}${ncell(r.rd)}${ncell(r.net,1)}<td class="mono">${fr(r.dr)}</td>${ncell(r.newDep)}${ncell(r.dARR,1)}${ncell(r.arrPrev)}<td class="mono" style="font-weight:600">${r.arr==null?'<span class="neg">不可行</span>':f0(r.arr)}</td><td class="mono">${fp(r.g)}</td><td class="mono">${r.check==null?'—':fr(r.check)}</td></tr>`; });
+    h+=`<tr class="p2"><td class="mono">${cy}E</td>${ncell(r.cap,1)}<td class="mono">${fp(pc>0?r.cap/pc-1:null)}</td>${ncell(r.rd)}${ncell(r.inf)}${ncell(r.rep)}${ncell(r.net,1)}<td class="mono">${fr(r.dr)}</td>${ncell(r.newDep)}${ncell(r.dARR,1)}${ncell(r.arrPrev)}<td class="mono" style="font-weight:600">${r.arr==null?'<span class="neg">不可行</span>':f0(r.arr)}</td><td class="mono">${fp(r.g)}</td><td class="mono">${r.check==null?'—':fr(r.check)}</td></tr>`; });
   document.getElementById('xTA').innerHTML=h;
-  h=`<tr><th>年份</th><th>当年 ARR</th><th>同比</th><th>当年 ARR 增量</th><th>× ${Math.round(S.ratio*100)}% = 当年新增理论折旧</th><th>÷ 年折旧率</th><th>= 推理净增</th><th>+ 非原生净新增</th><th>+ 全部更新</th><th>└ 推理更新</th><th>└ 非原生更新</th><th>= 当年所需 capex</th><th>capex 同比</th><th>A 路径 capex</th><th>B − A</th></tr>`;
+  h=`<tr><th>年份</th><th>当年 ARR</th><th>同比</th><th>当年 ARR 增量</th><th>× ${Math.round(S.ratio*100)}% = 当年新增理论折旧</th><th>÷ 年折旧率</th><th>= 推理净增</th><th>+ 推理设备更新</th><th>= 推理 capex</th><th>+ 非原生 capex（总额）</th><th>= 当年所需 capex</th><th>capex 同比</th><th>A 路径 capex</th><th>B − A</th></tr>`;
   CY.forEach(cy=>{ const r=B[cy];
-    h+=`<tr class="p2"><td class="mono">${cy}E</td>${ncell(r.arr,1)}<td class="mono">${fp(r.g)}</td>${ncell(r.dARR)}${ncell(r.newDep)}<td class="mono">${fr(r.dr)}</td>${ncell(r.netReq,1)}${ncell(r.rd)}${ncell(r.rep)}${ncell(r.repInf)}${ncell(r.repRD)}<td class="mono ${r.infeasible?'neg':''}" style="font-weight:600">${r.infeasible?'需为负 → 0':f0(r.cap)}</td><td class="mono">${fp(r.capG)}</td>${ncell(A[cy].cap)}${dcell(r.cap-A[cy].cap)}</tr>`; });
+    h+=`<tr class="p2"><td class="mono">${cy}E</td>${ncell(r.arr,1)}<td class="mono">${fp(r.g)}</td>${ncell(r.dARR)}${ncell(r.newDep)}<td class="mono">${fr(r.dr)}</td>${ncell(r.netReq,1)}${ncell(r.rep)}${ncell(r.inf)}${ncell(r.rd)}<td class="mono ${r.infeasible?'neg':''}" style="font-weight:600">${r.infeasible?'需为负 → 0':f0(r.cap)}</td><td class="mono">${fp(r.capG)}</td>${ncell(A[cy].cap)}${dcell(r.cap-A[cy].cap)}</tr>`; });
   document.getElementById('xTB').innerHTML=h;
 }
 const dtxt=v=>`<span class="mono ${v>0.5?'idle':v<-0.5?'neg':''}">${v>0?'+':''}${f0(v)}</span>`;
@@ -694,13 +695,14 @@ function stepsX(A,B){
   const rp=Math.round(S.ratio*100)+'%';
   let h='<div class="xsteps"><div class="xsh"><span class="tagA">A</span> 正算：当年 capex → 当年 ARR</div><div class="xsh"><span class="tagB">B</span> 反算：当年 ARR → 当年 capex</div><div class="xsh">差（B − A）</div>';
   CY.forEach(cy=>{ const a=A[cy], b=B[cy];
-    const rdTxtA=cy<=2027?`非原生总额 ${f0(a.rd+a.repRD)} − 其中更新 ${f0(a.repRD)} = 非原生净新增 ${f0(a.rd)}`:(S.rdMode==='split'?`5:5：(总 capex − 更新) ÷ 2 = 非原生净新增 ${f0(a.rd)}`:`非原生净新增 ${f0(a.rd)}（情景设定）`);
-    const rdTxtB=cy<=2027?`非原生净新增 ${f0(b.rd)}（总额 ${f0(b.rd+b.repRD)} − 更新 ${f0(b.repRD)}）`:(S.rdMode==='split'?`非原生净新增 = 推理净增（5:5）= ${f0(b.rd)}`:`非原生净新增 ${f0(b.rd)}（情景设定）`);
+    const rdTxtA=S.rdMode==='split'&&cy>=2028?`5:5：(总 capex − 推理设备更新) ÷ 2 = ${f0(a.rd)}`:`${f0(a.rd)}（${cy<=2027?'锁定历史值':'情景设定'}，已含非原生自身更新）`;
+    const rdTxtB=S.rdMode==='split'&&cy>=2028?`= 推理净增（5:5）${f0(b.rd)}`:`${f0(b.rd)}（${cy<=2027?'锁定历史值':'情景设定'}，已含非原生自身更新）`;
     h+=`<div class="xyr">${cy}E：当年 capex ⇄ 当年 ARR</div>
     <div class="xc xA"><ol>
       <li>${cy} 年总 capex <b>${f0(a.cap)}</b></li>
-      <li>− 全部更新 ${f0(a.rep)}（推理 ${f0(a.repInf)} + 非原生 ${f0(a.repRD)}）</li>
-      <li>− ${rdTxtA}</li>
+      <li>− 非原生 capex ${rdTxtA}</li>
+      <li>= 推理 capex ${f0(a.inf)}</li>
+      <li>− 推理设备更新 ${f0(a.rep)}（此前各批推理设备当年的${S.repMode==='dep'?'折旧额':'到期原值'}）</li>
       <li>= 推理净增 <b>${f0(a.net)}</b></li>
       <li>× 年折旧率 ${fr(a.dr)}（${xLife(cy)} 年寿命${S.spread?'，分批退役加权':''}）= 当年新增理论折旧 <b>${f0(a.newDep)}</b></li>
       <li>÷ ${rp} = ${cy} 年 ARR 增量 <b>${f0(a.dARR)}</b></li>
@@ -709,10 +711,10 @@ function stepsX(A,B){
       <li>${cy} 年 ARR <b>${f0(b.arr)}</b> − ${cy-1} 年 ${f0(b.arr0)} = 增量 <b>${f0(b.dARR)}</b>（${fp(b.g)}）</li>
       <li>× ${rp} = 当年需要的新增理论折旧 <b>${f0(b.newDep)}</b></li>
       <li>÷ 年折旧率 ${fr(b.dr)} = 需要的推理净增 <b>${f0(b.netReq)}</b></li>
-      <li>+ ${rdTxtB}</li>
-      <li>+ 全部更新 ${f0(b.rep)}（推理 ${f0(b.repInf)} + 非原生 ${f0(b.repRD)}）</li>
+      <li>+ 推理设备更新 ${f0(b.rep)} = 推理 capex ${f0(b.inf)}</li>
+      <li>+ 非原生 capex ${rdTxtB}</li>
       <li>= ${cy} 年所需 capex <b>${b.infeasible?'为负（按 0 计）':f0(b.cap)}</b>${cy===2027?'（2027 锁定，反算回来正好等于 12,000）':''}</li></ol></div>
-    <div class="xc xd"><div>capex ${dtxt(b.cap-a.cap)}</div><div>推理净增 ${dtxt(b.net-a.net)}</div><div>新增折旧 ${dtxt(b.newDep-a.newDep)}</div><div>更新 ${dtxt(b.rep-a.rep)}</div><div>${cy} ARR ${a.arr==null?'—':dtxt(b.arr-a.arr)}</div></div>`;
+    <div class="xc xd"><div>capex ${dtxt(b.cap-a.cap)}</div><div>推理净增 ${dtxt(b.net-a.net)}</div><div>新增折旧 ${dtxt(b.newDep-a.newDep)}</div><div>推理更新 ${dtxt(b.rep-a.rep)}</div><div>${cy} ARR ${a.arr==null?'—':dtxt(b.arr-a.arr)}</div></div>`;
   });
   document.getElementById('xSteps').innerHTML=h+'</div>';
 }
@@ -738,7 +740,7 @@ function kpisX(A,B){
 }
 function formulaX(){
   const r=Math.round(S.ratio*100);
-  document.getElementById('xFormula').innerHTML=`<b>口径：当年 capex 的理论年折旧（即使当年还没开始计提）对应当年的 ARR 增量</b><br><span style="color:var(--sa)">A</span>：推理净增(t) = capex(t) − 全部更新(t) − 非原生净新增(t)；新增理论折旧(t) = 推理净增(t) × 年折旧率；<b>ARR(t) = ARR(t−1) + 新增理论折旧(t) ÷ ${r}%</b><br><span style="color:var(--sb)">B</span>：新增理论折旧(t) = [ARR(t) − ARR(t−1)] × ${r}%；推理净增(t) = 新增理论折旧(t) ÷ 年折旧率；<b>capex(t) = 全部更新(t) + 非原生净新增(t) + 推理净增(t)</b><br><span style="color:var(--ink2)">年折旧率：2027 年买的 ${fr(xRate(2027))}（${S.lifeOld} 年），2028 起 ${fr(xRate(2028))}（${S.lifeNew} 年）${S.spread?'，分批退役按寿命 −1 / 0 / +1 年各 1/3 加权':''}。更新 = 此前各批设备在当年的${S.repMode==='dep'?'折旧额':'到期原值'}，A、B 各用自己的 capex 滚动。2026 年 capex 7000、2027 年 capex 12000 锁定，2026 年 ARR 1000 为实际值；2027 年 ARR 由锁定的 12000 正算得出，A、B 相同，2028 起两边才分开。</span>`;
+  document.getElementById('xFormula').innerHTML=`<b>口径：当年 capex 的理论年折旧（即使当年还没开始计提）对应当年的 ARR 增量</b><br><span style="color:var(--sa)">A</span>：推理净增(t) = capex(t) − 非原生 capex(t) − 推理设备更新(t)；新增理论折旧(t) = 推理净增(t) × 年折旧率；<b>ARR(t) = ARR(t−1) + 新增理论折旧(t) ÷ ${r}%</b><br><span style="color:var(--sb)">B</span>：新增理论折旧(t) = [ARR(t) − ARR(t−1)] × ${r}%；推理净增(t) = 新增理论折旧(t) ÷ 年折旧率；<b>capex(t) = 推理净增(t) + 推理设备更新(t) + 非原生 capex(t)</b><br><span style="color:var(--ink2)">年折旧率：2027 年买的 ${fr(xRate(2027))}（${S.lifeOld} 年），2028 起 ${fr(xRate(2028))}（${S.lifeNew} 年）${S.spread?'，分批退役按寿命 −1 / 0 / +1 年各 1/3 加权':''}。更新只算推理设备：此前各批推理 capex 在当年的${S.repMode==='dep'?'折旧额':'到期原值'}，A、B 各用自己的推理 capex 滚动；非原生 capex 是每年的总额（2027 年起 ${f0(S.rdHist[2027])}，2028 起按情景），已含其自身更新，不再另算。2026 年 capex 7000、2027 年 capex 12000 锁定，2026 年 ARR 1000 为实际值；2027 年 ARR 由锁定的 12000 正算得出，A、B 相同，2028 起两边才分开。</span>`;
 }
 function render23(){ xInputs(); const A=computeA(), B=computeB(), rt=roundTrip(A,B); formulaX(); chartX0(A,B,rt); chartX1(A,B); chartX2(A,B); tablesX(A,B); stepsX(A,B); kpisX(A,B); }
 document.getElementById('xA2B').onclick=()=>{ const A=computeA(); if(CY.some(c=>A[c].arr==null)) return; FY.forEach(c=>S.arrB[c]=A[c].arr); S.arrBMode='manual'; render23(); };
