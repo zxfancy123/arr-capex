@@ -4,19 +4,19 @@
 :root{
   --bg:#F2F4F6; --panel:#FFFFFF; --ink:#16232E; --ink2:#5A6B7A; --line:#D6DCE2; --grid:#E6EAEE;
   --arr:#0E6B6B; --arr-soft:#0E6B6B26; --dem:#8A93A0; --cap:#D98E04; --cap-soft:#D98E0433; --dep:#7A3DD1; --keep:#5C6E7E; --rd:#8E5AD1; --waste:#B4BDC6; --neg:#C43C3C; --neg-soft:#C43C3C2E; --idle:#4C7BD9;
-  --chip:#E8ECEF; --focus:#0E6B6B; --sa:#0B7A72; --sb:#C98200;
+  --chip:#E8ECEF; --focus:#0E6B6B; --sa:#0B7A72; --sb:#C98200; --band:#F5F7F9;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0F161C; --panel:#18222B; --ink:#E6ECF0; --ink2:#93A3B0; --line:#2C3944; --grid:#233039;
     --arr:#3FC2B8; --arr-soft:#3FC2B826; --dem:#8C99A6; --cap:#F0B03E; --cap-soft:#F0B03E33; --dep:#B58CFF; --keep:#7E93A4; --rd:#A88AE6; --waste:#4B5A68; --neg:#F07070; --neg-soft:#F070702E; --idle:#7FA3F0;
-    --chip:#243039; --focus:#3FC2B8; --sa:#3FC2B8; --sb:#F0B03E;
+    --chip:#243039; --focus:#3FC2B8; --sa:#3FC2B8; --sb:#F0B03E; --band:#1C2730;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0F161C; --panel:#18222B; --ink:#E6ECF0; --ink2:#93A3B0; --line:#2C3944; --grid:#233039;
   --arr:#3FC2B8; --arr-soft:#3FC2B826; --dem:#8C99A6; --cap:#F0B03E; --cap-soft:#F0B03E33; --dep:#B58CFF; --keep:#7E93A4; --rd:#A88AE6; --waste:#4B5A68; --neg:#F07070; --neg-soft:#F070702E; --idle:#7FA3F0;
-  --chip:#243039; --focus:#3FC2B8; --sa:#3FC2B8; --sb:#F0B03E;
+  --chip:#243039; --focus:#3FC2B8; --sa:#3FC2B8; --sb:#F0B03E; --band:#1C2730;
 }
 *{box-sizing:border-box}
 .tabs{display:flex;gap:6px;margin:10px 0 18px;border-bottom:1px solid var(--line)}
@@ -594,56 +594,84 @@ const dcell=(v,thr=0.5)=>v==null?'<td class="mono">—</td>':`<td class="mono ${
 const ncell=(v,bold)=>`<td class="mono ${v!=null&&v<-0.5?'neg':''}"${bold?' style="font-weight:600"':''}>${f0(v)}</td>`;
 function xTip(svg){ let tip=document.getElementById('xTipBox'); if(!tip){tip=document.createElement('div');tip.id='xTipBox';tip.className='xtip';document.body.appendChild(tip);}
   svg.querySelectorAll('[data-tip]').forEach(r=>{ r.onmousemove=e=>{tip.innerHTML=r.dataset.tip;tip.style.display='block';tip.style.left=Math.min(e.clientX+14,innerWidth-240)+'px';tip.style.top=(e.clientY+14)+'px';}; r.onmouseleave=()=>tip.style.display='none'; }); }
+// ---- shared year grid: every chart uses the same 2025–2032 columns, so a year sits in the same vertical line on every chart ----
+const XY=[2025,2026,2027,2028,2029,2030,2031,2032], XL=60, XR=16, XWD=860, COLW=(XWD-XL-XR)/XY.length, XBW=COLW*.32;
+const xAt=yr=>XL+COLW*(XY.indexOf(yr)+.5);
+const xBar=(yr,k)=>k==='A'?xAt(yr)-XBW-2:k==='B'?xAt(yr)+2:xAt(yr)-XBW/2;
+const yLab=yr=>`${yr}${yr>=2027?'E':''}`;
+function xBands(top,h){ let s=''; XY.forEach((yr,i)=>{ if(i%2===0) s+=`<rect x="${XL+COLW*i}" y="${top}" width="${COLW}" height="${h}" fill="var(--band)"/>`; if(i) s+=`<line x1="${XL+COLW*i}" x2="${XL+COLW*i}" y1="${top}" y2="${top+h}" stroke="var(--grid)"/>`; }); return s; }
+function xGrid(y,lo,hi,step){ let s=''; for(let v=Math.ceil(lo/step)*step;v<=hi;v+=step) s+=`<line x1="${XL}" x2="${XWD-XR}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-dasharray="${Math.abs(v)<1e-9?'':'2 3'}"/><text x="${XL-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--ink2)" font-family="${MONO}">${fmt(Math.abs(v)<1e-9?0:v)}</text>`; return s; }
+const xStep=hi=>hi>40000?10000:hi>16000?5000:hi>6000?2000:1000;
+const fcBox=(x,y0,y1)=>`<rect x="${x-2}" y="${y1-2}" width="${XBW+4}" height="${Math.max(0,y0-y1)+2}" fill="none" stroke="var(--ink2)" stroke-dasharray="3 3"/>`;
+const vLab=(x,yy,v)=>`<text x="${x+XBW/2}" y="${yy}" text-anchor="middle" font-size="10" fill="var(--ink)" font-family="${MONO}">${v>=10000?(v/10000).toFixed(2)+'万亿':f0(v)}</text>`;
+const diamond=(cx,cy)=>`<path d="M${cx} ${cy-7}L${cx+7} ${cy}L${cx} ${cy+7}L${cx-7} ${cy}Z" fill="var(--ink)" stroke="var(--panel)" stroke-width="2"/>`;
+const hitCol=(yr,top,h,tip)=>`<rect x="${xAt(yr)-COLW/2}" y="${top}" width="${COLW}" height="${h}" fill="transparent" data-tip="${tip}"/>`;
+const arrOf=(o,yr)=>yr<=2026?S.arrHist[yr]:o[yr].arr;
+const capOf=(o,yr)=>yr<=2026?S.capHist[yr]:o[yr].cap;
+
 function chartX1(A,B){
-  const W=860,H=300,ml=60,mr=16,mt=28,mb=32,iw=W-ml-mr,ih=H-mt-mb;
-  const years=[2025,2026,...AY];
-  const val=(y,k)=>y<=2026?S.arrHist[y]:k==='A'?A[y].arr:B[y].arr;
-  const max=Math.max(1,...years.flatMap(y=>[val(y,'A')||0,val(y,'B')||0]))*1.14;
-  const x=i=>ml+iw*(i+.5)/years.length, y=v=>mt+ih*(1-v/max), bw=iw/years.length*.34;
-  let s=''; const step=max>40000?10000:max>16000?5000:max>6000?2000:1000;
-  for(let v=0;v<=max;v+=step) s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${ml-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--ink2)" font-family="${MONO}">${fmt(v)}</text>`;
-  years.forEach((yr,i)=>{
-    const fc=yr>=2027; let tip=`<b>${yr}${fc?'E':''} ARR</b>`;
-    [['A',-1,'var(--sa)'],['B',1,'var(--sb)']].forEach(([k,side,col])=>{ const v=val(yr,k); if(yr<=2026&&k==='B') return;
-      const cx=yr<=2026?x(i)-bw/2:x(i)+side*bw*.52-bw/2;
-      tip+=`<br>${yr<=2026?'实际':k}：${v==null?'不可行':f0(v)}`;
-      if(v==null){ s+=`<text x="${cx+bw/2}" y="${y(0)-6}" text-anchor="middle" font-size="10" fill="var(--neg)">不可行</text>`; return; }
-      s+=`<rect x="${cx}" y="${y(v)}" width="${bw}" height="${Math.max(0,y(0)-y(v))}" fill="${yr<=2026?'var(--keep)':col}" rx="2"/>`;
-      if(fc) s+=`<rect x="${cx-2}" y="${y(v)-2}" width="${bw+4}" height="${Math.max(0,y(0)-y(v))+2}" fill="none" stroke="var(--ink2)" stroke-dasharray="3 3"/>`;
-      const vo=k==='A'?val(yr,'B'):val(yr,'A'); const lift=(yr>=2027&&vo!=null&&Math.abs(y(v)-y(vo))<13&&(v>vo||(v===vo&&k==='A')))?13:0;
-      s+=`<text x="${cx+bw/2}" y="${y(v)-8-lift}" text-anchor="middle" font-size="10" fill="var(--ink)" font-family="${MONO}">${v>=10000?(v/10000).toFixed(2)+'万亿':f0(v)}</text>`;
-    });
-    if(fc&&val(yr,'A')!=null){ const d=val(yr,'B')-val(yr,'A'); tip+=`<br>B − A：${d>0?'+':''}${f0(d)}`; }
-    s+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${yr}${fc?'E':''}</text>`;
-    s+=`<rect x="${x(i)-iw/years.length/2}" y="${mt}" width="${iw/years.length}" height="${ih}" fill="transparent" data-tip="${tip}"/>`;
-  });
-  s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)"/>`;
+  const H=300,mt=28,mb=32,ih=H-mt-mb;
+  const max=Math.max(1,...XY.flatMap(yr=>[arrOf(A,yr)||0,arrOf(B,yr)||0]))*1.14;
+  const y=v=>mt+ih*(1-v/max);
+  let s=xBands(mt,ih)+xGrid(y,0,max,xStep(max));
+  XY.forEach(yr=>{ const fc=yr>=2027; let tip=`<b>${yLab(yr)} ARR</b>`;
+    if(!fc){ const v=S.arrHist[yr]; s+=`<rect x="${xBar(yr)}" y="${y(v)}" width="${XBW}" height="${y(0)-y(v)}" fill="var(--keep)" rx="2"/>`+vLab(xBar(yr),y(v)-8,v); tip+=`<br>实际：${f0(v)}`; }
+    else [['A','var(--sa)'],['B','var(--sb)']].forEach(([k,col])=>{ const o=k==='A'?A:B, v=o[yr].arr, bx=xBar(yr,k); tip+=`<br>${k}：${v==null?'不可行':f0(v)}`;
+      if(v==null){ s+=`<text x="${bx+XBW/2}" y="${y(0)-6}" text-anchor="middle" font-size="10" fill="var(--neg)">不可行</text>`; return; }
+      const vo=(k==='A'?B:A)[yr].arr; const lift=(vo!=null&&Math.abs(y(v)-y(vo))<13&&(v>vo||(v===vo&&k==='A')))?13:0;
+      s+=`<rect x="${bx}" y="${y(v)}" width="${XBW}" height="${y(0)-y(v)}" fill="${col}" rx="2"/>`+fcBox(bx,y(0),y(v))+vLab(bx,y(v)-8-lift,v); });
+    if(fc&&A[yr].arr!=null){ const d=B[yr].arr-A[yr].arr; tip+=`<br>B − A：${d>0?'+':''}${f0(d)}`; }
+    s+=`<text x="${xAt(yr)}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${yLab(yr)}</text>`+hitCol(yr,mt,ih,tip); });
   const el=document.getElementById('xE1'); el.innerHTML=s; xTip(el);
 }
 function chartX2(A,B){
-  const W=860,H=320,ml=60,mr=16,mt=24,mb=40,iw=W-ml-mr,ih=H-mt-mb;
+  const H=320,mt=24,mb=40,ih=H-mt-mb;
   const all=CY.flatMap(c=>[A[c],B[c]]);
-  const hi=Math.max(1,...all.map(r=>Math.max(r.cap,r.rep+Math.max(0,r.rd)+Math.max(0,r.net))))*1.12, lo=Math.min(0,...all.map(r=>r.net))*1.15;
-  const x=i=>ml+iw*(i+.5)/CY.length, y=v=>mt+ih*(hi-v)/(hi-lo), bw=iw/CY.length*.34;
-  let s=''; const step=hi>40000?10000:hi>16000?5000:2000;
-  for(let v=Math.ceil(lo/step)*step;v<=hi;v+=step) s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${ml-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--ink2)" font-family="${MONO}">${fmt(Math.abs(v)<1e-9?0:v)}</text>`;
-  CY.forEach((cy,i)=>{
-    let tip=`<b>${cy} 年 capex</b>`;
-    [[A[cy],-1,'var(--sa)','A'],[B[cy],1,'var(--sb)','B']].forEach(([r,side,col,k])=>{
-      const cx=x(i)+side*bw*.52-bw/2; let acc=0;
+  const hi=Math.max(1,S.capHist[2025],S.capHist[2026],...all.map(r=>Math.max(r.cap,r.rep+Math.max(0,r.rd)+Math.max(0,r.net))))*1.12, lo=Math.min(0,...all.map(r=>r.net))*1.15;
+  const y=v=>mt+ih*(hi-v)/(hi-lo);
+  let s=xBands(mt,ih)+xGrid(y,lo,hi,xStep(hi));
+  XY.forEach(yr=>{ let tip=`<b>${yLab(yr)} capex</b>`;
+    if(yr<=2026){ const v=S.capHist[yr]; s+=`<rect x="${xBar(yr)}" y="${y(v)}" width="${XBW}" height="${y(0)-y(v)}" fill="var(--keep)" rx="2"/>`+vLab(xBar(yr),y(v)-6,v); tip+=`<br>实际：${f0(v)}（A、B 共用）`; }
+    else [['A','var(--sa)'],['B','var(--sb)']].forEach(([k,col])=>{ const r=(k==='A'?A:B)[yr], bx=xBar(yr,k); let acc=0;
       const rep=Math.max(0,r.rep+Math.min(0,r.net)), rd=Math.max(0,r.rd);
-      [[rep,'var(--keep)'],[rd,'var(--rd)'],[Math.max(0,r.net),col]].forEach(([v,c])=>{ if(v>0.5){ s+=`<rect x="${cx}" y="${y(acc+v)}" width="${bw}" height="${y(acc)-y(acc+v)}" fill="${c}"/>`; acc+=v+0; } });
-      if(r.net<-0.5) s+=`<rect x="${cx}" y="${y(0)}" width="${bw}" height="${y(r.net)-y(0)}" fill="var(--neg-soft)" stroke="var(--neg)" stroke-dasharray="3 3"/>`;
-      if(cy>=2027) s+=`<rect x="${cx-2}" y="${y(Math.max(r.cap,acc))-2}" width="${bw+4}" height="${y(0)-y(Math.max(r.cap,acc))+2}" fill="none" stroke="var(--ink2)" stroke-dasharray="3 3"/>`;
-      s+=`<text x="${cx+bw/2}" y="${y(Math.max(r.cap,acc))-6}" text-anchor="middle" font-size="10" fill="var(--ink)" font-family="${MONO}">${f0(r.cap)}</text>`;
-      s+=`<text x="${cx+bw/2}" y="${H-24}" text-anchor="middle" font-size="10" fill="var(--ink2)">${k}</text>`;
-      tip+=`<br>${k}：总 ${f0(r.cap)} = 更新 ${f0(r.rep)} + 非原生 ${f0(r.rd)} + 推理 ${f0(r.net)}`;
-    });
-    s+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${cy}${cy>=2027?'E':''}</text>`;
-    s+=`<rect x="${x(i)-iw/CY.length/2}" y="${mt}" width="${iw/CY.length}" height="${ih}" fill="transparent" data-tip="${tip}"/>`;
-  });
-  s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)"/>`;
+      [[rep,'var(--keep)'],[rd,'var(--rd)'],[Math.max(0,r.net),col]].forEach(([v,c])=>{ if(v>0.5){ s+=`<rect x="${bx}" y="${y(acc+v)}" width="${XBW}" height="${y(acc)-y(acc+v)}" fill="${c}"/>`; acc+=v; } });
+      if(r.net<-0.5) s+=`<rect x="${bx}" y="${y(0)}" width="${XBW}" height="${y(r.net)-y(0)}" fill="var(--neg-soft)" stroke="var(--neg)" stroke-dasharray="3 3"/>`;
+      const top=Math.max(r.cap,acc), ro=(k==='A'?B:A)[yr], oTop=Math.max(ro.cap,ro.rep+Math.max(0,ro.rd)+Math.max(0,ro.net)); const lift=(Math.abs(y(top)-y(oTop))<13&&(top>oTop||(Math.abs(top-oTop)<1e-6&&k==='B')))?13:0; s+=fcBox(bx,y(0),y(top))+vLab(bx,y(top)-6-lift,r.cap);
+      s+=`<text x="${bx+XBW/2}" y="${H-24}" text-anchor="middle" font-size="10" fill="var(--ink2)">${k}</text>`;
+      tip+=`<br>${k}：总 ${f0(r.cap)} = 更新 ${f0(r.rep)} + 非原生 ${f0(r.rd)} + 推理 ${f0(r.net)}`; });
+    s+=`<text x="${xAt(yr)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${yLab(yr)}</text>`+hitCol(yr,mt,ih,tip); });
   const el=document.getElementById('xE2'); el.innerHTML=s; xTip(el);
+}
+function chartX0(A,B,rt){
+  const top1=34,h1=190,top2=top1+h1+66,h2=190;
+  let s='';
+  const panel=(top,h,title,vals)=>{ const hi=Math.max(1,...vals)*1.18; const y=v=>top+h*(1-Math.max(0,v)/hi);
+    s+=xBands(top,h)+`<text x="${XL}" y="${top-12}" font-size="12" font-weight="600" fill="var(--ink)">${title}</text>`+xGrid(y,0,hi,xStep(hi)); return y; };
+  // top: ARR
+  const y1=panel(top1,h1,'当年 ARR：A 由 capex 正算 · B 设定值；◆ = 把 B 反算出的 capex 再正算回来',XY.flatMap(yr=>[arrOf(A,yr)||0,arrOf(B,yr)||0]));
+  XY.forEach(yr=>{ let tip;
+    if(yr<=2026){ const v=S.arrHist[yr]; s+=`<rect x="${xBar(yr)}" y="${y1(v)}" width="${XBW}" height="${y1(0)-y1(v)}" fill="var(--keep)" rx="2"/>`; tip=`<b>${yr} ARR</b><br>实际：${f0(v)}`; }
+    else { const a=A[yr].arr, b=B[yr].arr, back=rt.AB[yr].arr;
+      if(a!=null) s+=`<rect x="${xBar(yr,'A')}" y="${y1(a)}" width="${XBW}" height="${y1(0)-y1(a)}" fill="var(--sa)" rx="2"/>`+fcBox(xBar(yr,'A'),y1(0),y1(a));
+      s+=`<rect x="${xBar(yr,'B')}" y="${y1(b)}" width="${XBW}" height="${y1(0)-y1(b)}" fill="var(--sb)" rx="2"/>`+fcBox(xBar(yr,'B'),y1(0),y1(b));
+      if(back!=null) s+=diamond(xBar(yr,'B')+XBW/2,y1(back));
+      tip=`<b>${yLab(yr)} ARR</b><br>A 正算：${a==null?'不可行':f0(a)}<br>B 设定：${f0(b)}<br>B 的 capex 回代 A：${back==null?'不可行':f0(back)}<br>回代误差：${back==null?'—':(back-b).toFixed(4)}`; }
+    s+=`<text x="${xAt(yr)}" y="${top1+h1+16}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${yLab(yr)}</text>`+hitCol(yr,top1,h1,tip); });
+  // bottom: capex
+  const y2=panel(top2,h2,'当年 capex：A 设定值 · B 由 ARR 反算；◆ = 把 A 正算出的 ARR 再反算回来',XY.flatMap(yr=>[capOf(A,yr),capOf(B,yr)]));
+  XY.forEach(yr=>{ let tip;
+    if(yr<=2026){ const v=S.capHist[yr]; s+=`<rect x="${xBar(yr)}" y="${y2(v)}" width="${XBW}" height="${y2(0)-y2(v)}" fill="var(--keep)" rx="2"/>`; tip=`<b>${yr} capex</b><br>实际：${f0(v)}`; }
+    else { const a=A[yr].cap, b=B[yr].cap, back=rt.BA?rt.BA[yr].cap:null;
+      s+=`<rect x="${xBar(yr,'A')}" y="${y2(a)}" width="${XBW}" height="${y2(0)-y2(a)}" fill="var(--sa)" rx="2"/>`+fcBox(xBar(yr,'A'),y2(0),y2(a));
+      s+=`<rect x="${xBar(yr,'B')}" y="${y2(b)}" width="${XBW}" height="${y2(0)-y2(b)}" fill="var(--sb)" rx="2"/>`+fcBox(xBar(yr,'B'),y2(0),y2(b));
+      if(back!=null) s+=diamond(xBar(yr,'A')+XBW/2,y2(back));
+      tip=`<b>${yLab(yr)} capex</b><br>A 设定：${f0(a)}<br>B 反算：${f0(b)}<br>A 的 ARR 回代 B：${back==null?'—':f0(back)}<br>回代误差：${back==null?'—':(back-a).toFixed(4)}`; }
+    s+=`<text x="${xAt(yr)}" y="${top2+h2+16}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${yLab(yr)}</text>`+hitCol(yr,top2,h2,tip); });
+  const el=document.getElementById('xE0'); el.innerHTML=s; xTip(el);
+  const eA=rt.BA?Math.max(...CY.map(c=>Math.abs(rt.BA[c].cap-A[c].cap))):null;
+  const eB=Math.max(...CY.map(c=>rt.AB[c].arr==null?Infinity:Math.abs(rt.AB[c].arr-B[c].arr)));
+  const neg=CY.some(c=>B[c].infeasible);
+  document.getElementById('xRT').innerHTML=`<b>第③页 → 第②页</b>（A 的 capex 正算出 ARR，再把这串 ARR 反算）：capex 回代误差最大 <span class="mono">${eA==null?'A 有不可行年份，无法回代':eA.toFixed(6)}</span>。<b>第②页 → 第③页</b>（B 的 ARR 反算出 capex，再把这串 capex 正算）：ARR 回代误差最大 <span class="mono">${eB===Infinity?'—':eB.toFixed(6)}</span>。${(eA!=null&&eA<1e-6&&eB<1e-6)?'<b class="ok">两个方向都回到原值，正反严格互逆 ✓</b>':neg?'<span class="neg">B 有年份所需 capex 为负（按 0 计），这些年回代不会归零。</span>':''}`;
 }
 function tablesX(A,B){
   let h=`<tr><th rowspan="2">年份</th><th colspan="3">当年 ARR</th><th colspan="2">ARR 同比</th><th colspan="3">当年 capex</th><th colspan="3">当年推理净增投入</th><th colspan="3">当年新增理论年折旧（= 当年 ARR 增量 × ${Math.round(S.ratio*100)}%）</th></tr>
@@ -694,41 +722,6 @@ function roundTrip(A,B){
   const capB={}; CY.forEach(c=>capB[c]=B[c].cap);
   const BA=okA?computeB(arrA):null, AB=computeA(capB);
   return {BA,AB,okA};
-}
-function chartX0(A,B,rt){
-  const W=860,H=520,ml=60,mr=16,iw=W-ml-mr, gap=46, top1=34, h1=190, top2=top1+h1+gap+20, h2=190;
-  const n=CY.length, x=i=>ml+iw*(i+.5)/n, bw=iw/n*.3;
-  let s='';
-  const panel=(top,h,title,vals,tickFmt)=>{ const hi=Math.max(1,...vals)*1.18; const y=v=>top+h*(1-Math.max(0,v)/hi);
-    const step=hi>40000?10000:hi>16000?5000:hi>6000?2000:1000;
-    s+=`<text x="${ml}" y="${top-12}" font-size="12" font-weight="600" fill="var(--ink)">${title}</text>`;
-    for(let v=0;v<=hi;v+=step) s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${ml-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--ink2)" font-family="${MONO}">${fmt(v)}</text>`;
-    s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)"/>`; return y; };
-  // top: ARR
-  const vA=CY.map(c=>A[c].arr||0), vB=CY.map(c=>B[c].arr);
-  const y1=panel(top1,h1,'当年 ARR：A 由 capex 正算 · B 设定值；◆ = 把 B 反算出的 capex 再正算回来',[...vA,...vB]);
-  CY.forEach((c,i)=>{ const a=A[c].arr, b=B[c].arr, back=rt.AB[c].arr;
-    if(a!=null) s+=`<rect x="${x(i)-bw-2}" y="${y1(a)}" width="${bw}" height="${y1(0)-y1(a)}" fill="var(--sa)" rx="2"/><rect x="${x(i)-bw-4}" y="${y1(a)-2}" width="${bw+4}" height="${y1(0)-y1(a)+2}" fill="none" stroke="var(--ink2)" stroke-dasharray="3 3"/>`;
-    s+=`<rect x="${x(i)+2}" y="${y1(b)}" width="${bw}" height="${y1(0)-y1(b)}" fill="var(--sb)" rx="2"/><rect x="${x(i)}" y="${y1(b)-2}" width="${bw+4}" height="${y1(0)-y1(b)+2}" fill="none" stroke="var(--ink2)" stroke-dasharray="3 3"/>`;
-    if(back!=null){ const cx=x(i)+2+bw/2, cy=y1(back); s+=`<path d="M${cx} ${cy-7}L${cx+7} ${cy}L${cx} ${cy+7}L${cx-7} ${cy}Z" fill="var(--ink)" stroke="var(--panel)" stroke-width="2"/>`; }
-    s+=`<text x="${x(i)}" y="${top1+h1+16}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${c}E</text>`;
-    const tip=`<b>${c}E ARR</b><br>A 正算：${a==null?'不可行':f0(a)}<br>B 设定：${f0(b)}<br>B 的 capex 回代 A：${back==null?'不可行':f0(back)}<br>回代误差：${back==null?'—':(back-b).toFixed(4)}`;
-    s+=`<rect x="${x(i)-iw/n/2}" y="${top1}" width="${iw/n}" height="${h1}" fill="transparent" data-tip="${tip}"/>`; });
-  // bottom: capex
-  const cA=CY.map(c=>A[c].cap), cB=CY.map(c=>B[c].cap);
-  const y2=panel(top2,h2,'当年 capex：A 设定值 · B 由 ARR 反算；◆ = 把 A 正算出的 ARR 再反算回来',[...cA,...cB]);
-  CY.forEach((c,i)=>{ const a=A[c].cap, b=B[c].cap, back=rt.BA?rt.BA[c].cap:null;
-    s+=`<rect x="${x(i)-bw-2}" y="${y2(a)}" width="${bw}" height="${y2(0)-y2(a)}" fill="var(--sa)" rx="2"/><rect x="${x(i)-bw-4}" y="${y2(a)-2}" width="${bw+4}" height="${y2(0)-y2(a)+2}" fill="none" stroke="var(--ink2)" stroke-dasharray="3 3"/>`;
-    s+=`<rect x="${x(i)+2}" y="${y2(b)}" width="${bw}" height="${y2(0)-y2(b)}" fill="var(--sb)" rx="2"/><rect x="${x(i)}" y="${y2(b)-2}" width="${bw+4}" height="${y2(0)-y2(b)+2}" fill="none" stroke="var(--ink2)" stroke-dasharray="3 3"/>`;
-    if(back!=null){ const cx=x(i)-bw/2-2, cy=y2(back); s+=`<path d="M${cx} ${cy-7}L${cx+7} ${cy}L${cx} ${cy+7}L${cx-7} ${cy}Z" fill="var(--ink)" stroke="var(--panel)" stroke-width="2"/>`; }
-    s+=`<text x="${x(i)}" y="${top2+h2+16}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-family="${MONO}">${c}E</text>`;
-    const tip=`<b>${c}E capex</b><br>A 设定：${f0(a)}<br>B 反算：${f0(b)}<br>A 的 ARR 回代 B：${back==null?'—':f0(back)}<br>回代误差：${back==null?'—':(back-a).toFixed(4)}`;
-    s+=`<rect x="${x(i)-iw/n/2}" y="${top2}" width="${iw/n}" height="${h2}" fill="transparent" data-tip="${tip}"/>`; });
-  const el=document.getElementById('xE0'); el.innerHTML=s; xTip(el);
-  const eA=rt.BA?Math.max(...CY.map(c=>Math.abs(rt.BA[c].cap-A[c].cap))):null;
-  const eB=Math.max(...CY.map(c=>rt.AB[c].arr==null?Infinity:Math.abs(rt.AB[c].arr-B[c].arr)));
-  const neg=CY.some(c=>B[c].infeasible);
-  document.getElementById('xRT').innerHTML=`<b>第③页 → 第②页</b>（A 的 capex 正算出 ARR，再把这串 ARR 反算）：capex 回代误差最大 <span class="mono">${eA==null?'A 有不可行年份，无法回代':eA.toFixed(6)}</span>。<b>第②页 → 第③页</b>（B 的 ARR 反算出 capex，再把这串 capex 正算）：ARR 回代误差最大 <span class="mono">${eB===Infinity?'—':eB.toFixed(6)}</span>。${(eA!=null&&eA<1e-6&&eB<1e-6)?'<b class="ok">两个方向都回到原值，正反严格互逆 ✓</b>':neg?'<span class="neg">B 有年份所需 capex 为负（按 0 计），这些年回代不会归零。</span>':''}`;
 }
 function kpisX(A,B){
   const sum=(o,k)=>CY.reduce((s,c)=>s+o[c][k],0);
